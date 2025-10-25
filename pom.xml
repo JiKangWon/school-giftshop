@@ -27,7 +27,6 @@
 			<groupId>jakarta.servlet.jsp.jstl</groupId>
 			<artifactId>jakarta.servlet.jsp.jstl-api</artifactId>
 			<version>3.0.0</version>
-			<scope>provided</scope>
 		</dependency>
 
 		<!-- Optional: JSTL implementation (only if you want to bundle it into
