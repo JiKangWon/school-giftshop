@@ -8,18 +8,19 @@ public class JDBCUtil {
 		Connection connection = null;
 		try {
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-			String url = "jdbc:sqlserver://localhost:1433;databaseName=SCHOOL_GIFTSHOP;encrypt=false;loginTimeout=30";
+			String url = "jdbc:sqlserver://USER:1433;databaseName=SCHOOL_GIFTSHOP;encrypt=false;loginTimeout=30";
 			String userName = "sa";
-			String password = "123456789";
+			String password = "123";
 			connection = DriverManager.getConnection(url, userName, password);
-		} catch(Exception e) {
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		return connection;
 	}
+
 	public static void closeConnection(Connection connection) {
 		try {
-			if (connection!=null) {
+			if (connection != null) {
 				connection.close();
 			}
 		} catch (Exception e) {

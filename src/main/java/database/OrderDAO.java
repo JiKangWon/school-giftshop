@@ -3,127 +3,189 @@ package database;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.sql.Statement;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.List;
 
 import model.Order;
 import model.User;
 
 public class OrderDAO {
-    public static ArrayList<Order> selectAll(){
-        ArrayList<Order> arr = new ArrayList<>();
-        try {
-            Connection conn = JDBCUtil.getConnection();
-            String sql = "SELECT * FROM orders";
-            PreparedStatement st = conn.prepareStatement(sql);
-            ResultSet rs = st.executeQuery();
-            while(rs.next()){
-                Long id = rs.getObject("id", Long.class);
-                Long userId = rs.getObject("user_id", Long.class);
-                User user = UserDAO.selectById(userId);
-                LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
-                String status = rs.getString("status");
-                BigDecimal total = rs.getBigDecimal("total_amount");
-                Order o = new Order(id, user, createdAt, status, total);
-                arr.add(o);
-            }
-            rs.close();
-            st.close();
-            JDBCUtil.closeConnection(conn);
-        } catch(Exception e){
-            e.printStackTrace();
-        }
-        return arr;
-    }
+	public static ArrayList<Order> selectAll() {
+		ArrayList<Order> arr = new ArrayList<>();
+		try {
+			Connection conn = JDBCUtil.getConnection();
+			String sql = "SELECT * FROM orders";
+			PreparedStatement st = conn.prepareStatement(sql);
+			ResultSet rs = st.executeQuery();
+			while (rs.next()) {
+				Long id = rs.getObject("id", Long.class);
+				Long userId = rs.getObject("user_id", Long.class);
+				User user = UserDAO.selectById(userId);
+				LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
+				String status = rs.getString("status");
+				BigDecimal total = rs.getBigDecimal("total_amount");
+				Order o = new Order(id, user, createdAt, status, total);
+				arr.add(o);
+			}
+			rs.close();
+			st.close();
+			JDBCUtil.closeConnection(conn);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return arr;
+	}
 
-    public static Order selectById(Long id){
-        if (id == null) return null;
-        Order o = null;
-        try {
-            Connection conn = JDBCUtil.getConnection();
-            String sql = "SELECT * FROM orders WHERE id = ?";
-            PreparedStatement st = conn.prepareStatement(sql);
-            st.setLong(1, id);
-            ResultSet rs = st.executeQuery();
-            if(rs.next()){
-                Long userId = rs.getObject("user_id", Long.class);
-                User user = UserDAO.selectById(userId);
-                LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
-                String status = rs.getString("status");
-                BigDecimal total = rs.getBigDecimal("total_amount");
-                o = new Order(id, user, createdAt, status, total);
-            }
-            rs.close();
-            st.close();
-            JDBCUtil.closeConnection(conn);
-        } catch(Exception e){
-            e.printStackTrace();
-        }
-        return o;
-    }
+	public static Order selectById(Long id) {
+		if (id == null)
+			return null;
+		Order o = null;
+		try {
+			Connection conn = JDBCUtil.getConnection();
+			String sql = "SELECT * FROM orders WHERE id = ?";
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setLong(1, id);
+			ResultSet rs = st.executeQuery();
+			if (rs.next()) {
+				Long userId = rs.getObject("user_id", Long.class);
+				User user = UserDAO.selectById(userId);
+				LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
+				String status = rs.getString("status");
+				BigDecimal total = rs.getBigDecimal("total_amount");
+				o = new Order(id, user, createdAt, status, total);
+			}
+			rs.close();
+			st.close();
+			JDBCUtil.closeConnection(conn);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return o;
+	}
 
-    public static int insert(Order o){
-        int res = 0;
-        try {
-            Connection conn = JDBCUtil.getConnection();
-            String sql = "INSERT INTO orders(id, user_id, createdAt, status, total_amount) VALUES (?,?,?,?,?)";
-            PreparedStatement st = conn.prepareStatement(sql);
-            if (o.getId() != null) st.setLong(1, o.getId()); else st.setNull(1, java.sql.Types.BIGINT);
-            if (o.getUser() != null && o.getUser().getId() != null) st.setLong(2, o.getUser().getId());
-            else st.setNull(2, java.sql.Types.BIGINT);
-            if (o.getCreatedAt() != null) st.setObject(3, o.getCreatedAt()); else st.setNull(3, java.sql.Types.TIMESTAMP);
-            st.setString(4, o.getStatus());
-            st.setBigDecimal(5, o.getTotalAmount());
-            res = st.executeUpdate();
-            st.close();
-            JDBCUtil.closeConnection(conn);
-        } catch(Exception e){
-            e.printStackTrace();
-        }
-        return res;
-    }
+	public static int insert(Order order) {
+		int res = 0;
+		try (Connection conn = JDBCUtil.getConnection()) {
+			String sql = "INSERT INTO orders(user_id, createdAt, status, total_amount) VALUES (?,?,?,?)";
+			System.out.println("SQL Order insert: " + sql);
+			PreparedStatement st = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
 
-    public static int insert(ArrayList<Order> arr){
-        int count = 0;
-        for(Order o: arr) count += insert(o);
-        return count;
-    }
+			st.setLong(1, order.getUser().getId());
+			st.setObject(2, order.getCreatedAt());
+			st.setString(3, order.getStatus());
+			st.setBigDecimal(4, order.getTotalAmount());
 
-    public static int delete(Order o){
-        int res = 0;
-        try {
-            Connection conn = JDBCUtil.getConnection();
-            String sql = "DELETE FROM orders WHERE id = ?";
-            PreparedStatement st = conn.prepareStatement(sql);
-            st.setLong(1, o.getId());
-            res = st.executeUpdate();
-            st.close();
-            JDBCUtil.closeConnection(conn);
-        } catch(Exception e){
-            e.printStackTrace();
-        }
-        return res;
-    }
+			System.out
+					.println("Order params: user_id=" + order.getUser().getId() + ", createdAt=" + order.getCreatedAt()
+							+ ", status=" + order.getStatus() + ", totalAmount=" + order.getTotalAmount());
 
-    public static int update(Order o){
-        int res = 0;
-        try {
-            Connection conn = JDBCUtil.getConnection();
-            String sql = "UPDATE orders SET user_id=?, createdAt=?, status=?, total_amount=? WHERE id=?";
-            PreparedStatement st = conn.prepareStatement(sql);
-            if (o.getUser() != null && o.getUser().getId() != null) st.setLong(1, o.getUser().getId());
-            else st.setNull(1, java.sql.Types.BIGINT);
-            if (o.getCreatedAt() != null) st.setObject(2, o.getCreatedAt()); else st.setNull(2, java.sql.Types.TIMESTAMP);
-            st.setString(3, o.getStatus());
-            st.setBigDecimal(4, o.getTotalAmount());
-            st.setLong(5, o.getId());
-            res = st.executeUpdate();
-            st.close();
-            JDBCUtil.closeConnection(conn);
-        } catch(Exception e){
-            e.printStackTrace();
-        }
-        return res;
-    }
+			res = st.executeUpdate();
+			System.out.println("Order insert result: " + res);
+
+			ResultSet rs = st.getGeneratedKeys();
+			if (rs.next()) {
+				order.setId(rs.getLong(1));
+				System.out.println("Generated Order ID: " + order.getId());
+			}
+
+			rs.close();
+			st.close();
+
+		} catch (Exception e) {
+			System.out.println("OrderDAO insert error:");
+			e.printStackTrace();
+		}
+		return res;
+	}
+
+	public static int insert(ArrayList<Order> arr) {
+		int count = 0;
+		for (Order o : arr)
+			count += insert(o);
+		return count;
+	}
+
+	public static int delete(Order o) {
+		int res = 0;
+		try {
+			Connection conn = JDBCUtil.getConnection();
+			String sql = "DELETE FROM orders WHERE id = ?";
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setLong(1, o.getId());
+			res = st.executeUpdate();
+			st.close();
+			JDBCUtil.closeConnection(conn);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return res;
+	}
+
+	public static int update(Order o) {
+		int res = 0;
+		try {
+			Connection conn = JDBCUtil.getConnection();
+			String sql = "UPDATE orders SET user_id=?, createdAt=?, status=?, total_amount=? WHERE id=?";
+			PreparedStatement st = conn.prepareStatement(sql);
+			if (o.getUser() != null && o.getUser().getId() != null)
+				st.setLong(1, o.getUser().getId());
+			else
+				st.setNull(1, java.sql.Types.BIGINT);
+			if (o.getCreatedAt() != null)
+				st.setObject(2, o.getCreatedAt());
+			else
+				st.setNull(2, java.sql.Types.TIMESTAMP);
+			st.setString(3, o.getStatus());
+			st.setBigDecimal(4, o.getTotalAmount());
+			st.setLong(5, o.getId());
+			res = st.executeUpdate();
+			st.close();
+			JDBCUtil.closeConnection(conn);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return res;
+	}
+
+	public static List<Order> selectProcessingOrdersByUser(long userId) {
+		List<Order> list = new ArrayList<>();
+		String sql = "SELECT * FROM orders WHERE user_id = ? AND status = 'processing' ORDER BY createdAt DESC";
+		try (Connection conn = JDBCUtil.getConnection(); PreparedStatement st = conn.prepareStatement(sql)) {
+			st.setLong(1, userId);
+			ResultSet rs = st.executeQuery();
+			while (rs.next()) {
+				Order o = new Order();
+				o.setId(rs.getLong("id"));
+				o.setCreatedAt(rs.getTimestamp("createdAt").toLocalDateTime());
+				o.setStatus(rs.getString("status"));
+				list.add(o);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
+
+	public static List<Order> selectCompletedOrdersByUser(long userId) {
+		List<Order> list = new ArrayList<>();
+		String sql = "SELECT * FROM orders WHERE user_id = ? AND status = 'completed' ORDER BY createdAt DESC";
+		try (Connection conn = JDBCUtil.getConnection(); PreparedStatement st = conn.prepareStatement(sql)) {
+			st.setLong(1, userId);
+			ResultSet rs = st.executeQuery();
+			while (rs.next()) {
+				Order o = new Order();
+				o.setId(rs.getLong("id"));
+				o.setCreatedAt(rs.getTimestamp("createdAt").toLocalDateTime());
+				o.setStatus(rs.getString("status"));
+				list.add(o);
+			}
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+		return list;
+	}
 }
