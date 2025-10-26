@@ -29,4 +29,14 @@
     <servlet-name>Register</servlet-name>
     <url-pattern>/register</url-pattern>
   </servlet-mapping>
+  <servlet>
+    <description></description>
+    <display-name>Seller</display-name>
+    <servlet-name>Seller</servlet-name>
+    <servlet-class>controller.Seller</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>Seller</servlet-name>
+    <url-pattern>/seller-page/*</url-pattern>
+  </servlet-mapping>
 </web-app>
