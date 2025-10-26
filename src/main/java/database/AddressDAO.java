@@ -8,6 +8,94 @@ import java.util.ArrayList;
 import model.Address;
 
 public class AddressDAO {
+	// Trong file: AddressDAO.java
+
+	// 1. Lấy TẤT CẢ Tỉnh/Thành phố (không trùng lặp)
+	public static ArrayList<String> getDistinctProvinces() {
+	    ArrayList<String> arr = new ArrayList<>();
+	    try {
+	        Connection conn = JDBCUtil.getConnection();
+	        // Giả sử tên cột của bạn là 'province'
+	        String sql = "SELECT DISTINCT province FROM addresses ORDER BY province"; 
+	        PreparedStatement st = conn.prepareStatement(sql);
+	        ResultSet rs = st.executeQuery();
+	        while (rs.next()) {
+	            arr.add(rs.getString("province"));
+	        }
+	        JDBCUtil.closeConnection(conn);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return arr;
+	}
+
+	// 2. Lấy Quận/Huyện DỰA TRÊN Tỉnh/Thành
+	public static ArrayList<String> getDistinctDistricts(String province) {
+	    ArrayList<String> arr = new ArrayList<>();
+	    try {
+	        Connection conn = JDBCUtil.getConnection();
+	        String sql = "SELECT DISTINCT district FROM addresses WHERE province = ? ORDER BY district";
+	        PreparedStatement st = conn.prepareStatement(sql);
+	        st.setString(1, province);
+	        ResultSet rs = st.executeQuery();
+	        while (rs.next()) {
+	            arr.add(rs.getString("district"));
+	        }
+	        JDBCUtil.closeConnection(conn);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return arr;
+	}
+
+	// 3. Lấy Phường/Xã DỰA TRÊN Tỉnh và Quận
+	public static ArrayList<String> getDistinctWards(String province, String district) {
+	    ArrayList<String> arr = new ArrayList<>();
+	    try {
+	        Connection conn = JDBCUtil.getConnection();
+	        String sql = "SELECT DISTINCT ward FROM addresses WHERE province = ? AND district = ? ORDER BY ward";
+	        PreparedStatement st = conn.prepareStatement(sql);
+	        st.setString(1, province);
+	        st.setString(2, district);
+	        ResultSet rs = st.executeQuery();
+	        while (rs.next()) {
+	            arr.add(rs.getString("ward"));
+	        }
+	        JDBCUtil.closeConnection(conn);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return arr;
+	}
+
+	// 4. Lấy danh sách địa chỉ CUỐI CÙNG (với ID)
+	public static ArrayList<Address> getFinalAddresses(String province, String district, String ward) {
+	    ArrayList<Address> arr = new ArrayList<>();
+	    try {
+	        Connection conn = JDBCUtil.getConnection();
+	        // Lấy tất cả thông tin (bao gồm ID) để người dùng chọn
+	        String sql = "SELECT * FROM addresses WHERE province = ? AND district = ? AND ward = ?";
+	        PreparedStatement st = conn.prepareStatement(sql);
+	        st.setString(1, province);
+	        st.setString(2, district);
+	        st.setString(3, ward);
+	        ResultSet rs = st.executeQuery();
+	        while(rs.next()){
+	            // Lấy tất cả các cột như trong hàm selectAll() của bạn
+	            Long id = rs.getLong("id");
+	            String country = rs.getString("country");
+	            String street = rs.getString("street");
+	            // ... (tạo đối tượng Address)
+	            Address a = new Address(id, country, province, district, ward, street);
+	            arr.add(a);
+	        }
+	        JDBCUtil.closeConnection(conn);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return arr;
+	}
+	
     public static ArrayList<Address> selectAll(){
         ArrayList<Address> arr = new ArrayList<>();
         try {

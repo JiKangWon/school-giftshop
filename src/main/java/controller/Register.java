@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import model.Address;
+import util.Encryption;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -75,6 +76,9 @@ public class Register extends HttpServlet {
 	    if (!password.equals(confirmPassword)) {
 	    	errorMessage = "password doesn't match";
 	    }
+	    
+	    // Hash password
+	    password = Encryption.toSHA256(password);
 	    // create new User
 	    if(errorMessage.length()==0) {
 	    	UserDAO.insert(userName, password, name, address, addressNumber, phone);
