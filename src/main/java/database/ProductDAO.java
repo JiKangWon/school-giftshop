@@ -11,6 +11,113 @@ import model.Category;
 import model.Product;
 
 public class ProductDAO {
+	// Thêm 2 phương thức này vào file database/ProductDAO.java
+	public static int toggleProductStatus(Long productId) {
+        int res = 0;
+        Connection conn = null;
+        PreparedStatement st = null;
+        try {
+            conn = JDBCUtil.getConnection();
+            
+            // Dùng SQL CASE WHEN để lật ngược trạng thái
+            String sql = "UPDATE products " +
+                         "SET status = CASE " +
+                         "    WHEN status = 'active' THEN 'hide' " +
+                         "    ELSE 'active' " +
+                         "END " +
+                         "WHERE id = ?";
+                         
+            st = conn.prepareStatement(sql);
+            st.setLong(1, productId);
+            res = st.executeUpdate();
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return res;
+    }
+    /**
+     * Đếm tổng số sản phẩm trong CSDL
+     */
+    public static int getTotalProductCount() {
+        int count = 0;
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        try {
+            conn = JDBCUtil.getConnection();
+            String sql = "SELECT COUNT(*) FROM products";
+            st = conn.prepareStatement(sql);
+            rs = st.executeQuery();
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // Luôn đóng tài nguyên
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return count;
+    }
+
+    /**
+     * Lấy danh sách TẤT CẢ sản phẩm theo phân trang (10 sản phẩm/trang)
+     * (Dựa trên hàm selectAll() của bạn)
+     */
+    public static ArrayList<Product> selectAllPaginated(int pageNumber, int pageSize) {
+        ArrayList<Product> arr = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        
+        try {
+            conn = JDBCUtil.getConnection();
+            
+            // Sử dụng cú pháp OFFSET...FETCH của SQL Server để phân trang
+            String sql = "SELECT * FROM products " +
+                         "ORDER BY id DESC " + // Sắp xếp theo ID mới nhất
+                         "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+            
+            st = conn.prepareStatement(sql);
+            
+            // Tính toán offset (ví dụ: trang 1 offset 0, trang 2 offset 10)
+            int offset = (pageNumber - 1) * pageSize;
+            
+            st.setInt(1, offset);
+            st.setInt(2, pageSize);
+            
+            rs = st.executeQuery();
+            
+            // Lặp qua kết quả và tạo đối tượng (giống hệt hàm selectAll() của bạn)
+            while (rs.next()) {
+                Long id = rs.getObject("id", Long.class);
+                Integer stock = rs.getObject("stock", Integer.class);
+                BigDecimal price = rs.getBigDecimal("price");
+                String name = rs.getString("name");
+                String description = rs.getString("description");
+                Integer categoryId = rs.getObject("category_id", Integer.class);
+                Category category = CategoryDAO.selectById(categoryId);
+                String status = rs.getString("status");
+                LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
+                Product p = new Product(id, stock, price, name, description, category, status, createdAt);
+                arr.add(p);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // Luôn đóng tài nguyên
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return arr;
+    }
     public static ArrayList<Product> selectAll(){
         ArrayList<Product> arr = new ArrayList<>();
         try {

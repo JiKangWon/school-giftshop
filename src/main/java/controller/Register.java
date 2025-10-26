@@ -36,9 +36,6 @@ public class Register extends HttpServlet {
 		String url = "/register.jsp";
 		// load Addresses Data
 		ArrayList<Address> arrAddress = AddressDAO.selectAll();
-		for(Address address: arrAddress) {
-			System.out.println(address);
-		}
 		request.setAttribute("arrAddress", arrAddress);
 		
 	    // Forward
