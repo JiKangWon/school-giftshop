@@ -1,5 +1,8 @@
 package controller;
 
+import java.io.IOException;
+
+import database.UserDAO;
 import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -10,13 +13,7 @@ import jakarta.servlet.http.HttpSession;
 import model.User;
 import util.Encryption;
 
-import java.io.IOException;
-
-import database.UserDAO;
-
-/**
- * Servlet implementation class Login
- */
+@WebServlet("/Login")
 public class Login extends HttpServlet {
 	private static final long serialVersionUID = 1L;
        
@@ -88,5 +85,4 @@ public class Login extends HttpServlet {
     		rd.forward(request, response);
         }
 	}
-
 }

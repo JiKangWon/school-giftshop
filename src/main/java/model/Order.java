@@ -2,47 +2,80 @@ package model;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Order {
-    private Long id;
-    private User user;             // FK -> users
-    private LocalDateTime createdAt;
-    private String status;
-    private BigDecimal totalAmount;
+	private Long id;
+	private User user; // FK -> users
+	private LocalDateTime createdAt;
+	private String status;
+	private BigDecimal totalAmount;
 
-    public Order() {}
+	private List<OrderProduct> orderProducts = new ArrayList<>();
 
-    public Order(Long id, User user, LocalDateTime createdAt, String status, BigDecimal totalAmount) {
-        this.id = id;
-        this.user = user;
-        this.createdAt = createdAt;
-        this.status = status;
-        this.totalAmount = totalAmount;
-    }
+	public List<OrderProduct> getOrderProducts() {
+		return orderProducts;
+	}
 
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+	public void setOrderProducts(List<OrderProduct> orderProducts) {
+		this.orderProducts = orderProducts;
+	}
 
-    public User getUser() { return user; }
-    public void setUser(User user) { this.user = user; }
+	public Order() {
+	}
 
-    public LocalDateTime getCreatedAt() { return createdAt; }
-    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+	public Order(Long id, User user, LocalDateTime createdAt, String status, BigDecimal totalAmount) {
+		this.id = id;
+		this.user = user;
+		this.createdAt = createdAt;
+		this.status = status;
+		this.totalAmount = totalAmount;
+	}
 
-    public String getStatus() { return status; }
-    public void setStatus(String status) { this.status = status; }
+	public Long getId() {
+		return id;
+	}
 
-    public BigDecimal getTotalAmount() { return totalAmount; }
-    public void setTotalAmount(BigDecimal totalAmount) { this.totalAmount = totalAmount; }
+	public void setId(Long id) {
+		this.id = id;
+	}
 
-    @Override
-    public String toString() {
-        return "Order{" +
-                "id=" + id +
-                ", user=" + (user != null ? user.getId() : null) +
-                ", createdAt=" + createdAt +
-                ", status='" + status + '\'' +
-                ", totalAmount=" + totalAmount +
-                '}';
-    }
+	public User getUser() {
+		return user;
+	}
+
+	public void setUser(User user) {
+		this.user = user;
+	}
+
+	public LocalDateTime getCreatedAt() {
+		return createdAt;
+	}
+
+	public void setCreatedAt(LocalDateTime createdAt) {
+		this.createdAt = createdAt;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public void setStatus(String status) {
+		this.status = status;
+	}
+
+	public BigDecimal getTotalAmount() {
+		return totalAmount;
+	}
+
+	public void setTotalAmount(BigDecimal totalAmount) {
+		this.totalAmount = totalAmount;
+	}
+
+	@Override
+	public String toString() {
+		return "Order{" + "id=" + id + ", user=" + (user != null ? user.getId() : null) + ", createdAt=" + createdAt
+				+ ", status='" + status + '\'' + ", totalAmount=" + totalAmount + '}';
+	}
 }
