@@ -8,9 +8,9 @@ public class JDBCUtil {
 		Connection connection = null;
 		try {
 			Class.forName("com.microsoft.sqlserver.jdbc.SQLServerDriver");
-			String url = "jdbc:sqlserver://USER:1433;databaseName=SCHOOL_GIFTSHOP;encrypt=false;loginTimeout=30";
+			String url = "jdbc:sqlserver://localhost:1433;databaseName=SCHOOL_GIFTSHOP;encrypt=false;loginTimeout=30";
 			String userName = "sa";
-			String password = "123";
+			String password = "123456789";
 			connection = DriverManager.getConnection(url, userName, password);
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -65,7 +65,7 @@ public class Login extends HttpServlet {
             session.setAttribute("user", user);
 
             // 3.2. Quyết định URL chuyển hướng dựa trên vai trò (role)
-            String url = "/customer/home.jsp"; // Mặc định là trang khách hàng
+            String url = "/CustomerHome"; // Mặc định là trang khách hàng
             
             if (user.getIsSeller()==1) {
                 // QUAN TRỌNG: Chuyển hướng đến SellerServlet, không phải file JSP

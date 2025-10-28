@@ -1,204 +1,209 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
-<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
-
-<html>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %> <%-- URI mới --%>
+<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %> <%-- URI mới --%>
+<!DOCTYPE html>
+<html lang="vi">
 <head>
-<title>Đơn hàng của tôi</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Đơn hàng của tôi - School Giftshop</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <style>
-body {
-	font-family: Arial, sans-serif;
-	margin: 20px;
-	background-color: #f9f9f9;
-}
-
-.tab-buttons {
-	display: flex;
-	justify-content: flex-start;
-	gap: 10px;
-	margin-bottom: 20px;
-}
-
-.tab-button {
-	padding: 10px 20px;
-	border: 1px solid #007bff;
-	border-radius: 5px;
-	background-color: white;
-	cursor: pointer;
-	transition: 0.2s;
-}
-
-.tab-button.active {
-	background-color: #007bff;
-	color: white;
-}
-
-.tab-content {
-	display: none;
-}
-
-.tab-content.active {
-	display: block;
-}
-
-.order-block {
-	border: 1px solid #ddd;
-	border-radius: 8px;
-	background: white;
-	padding: 15px;
-	margin-bottom: 15px;
-}
-
-table {
-	border-collapse: collapse;
-	width: 100%;
-	margin: 10px 0;
-}
-
-th, td {
-	border: 1px solid #ccc;
-	padding: 8px;
-	text-align: left;
-}
-
-button {
-	padding: 6px 12px;
-	background-color: #007bff;
-	color: white;
-	border: none;
-	border-radius: 4px;
-	cursor: pointer;
-}
-
-button:hover {
-	background-color: #0056b3;
-}
-
-input[type="text"] {
-	padding: 5px;
-	width: 60%;
-}
+    body {
+        background-color: #f8f9fa;
+    }
+    .order-card .card-header {
+        font-weight: 500;
+    }
+    .order-card table {
+        margin-bottom: 0; /* Bỏ margin đáy mặc định của table trong card */
+    }
 </style>
-
-<script>
-function openTab(tabName) {
-    const contents = document.querySelectorAll(".tab-content");
-    contents.forEach(c => c.classList.remove("active"));
-
-    const buttons = document.querySelectorAll(".tab-button");
-    buttons.forEach(b => b.classList.remove("active"));
-
-    document.getElementById(tabName).classList.add("active");
-    document.getElementById(tabName + "-btn").classList.add("active");
-}
-
-window.onload = () => openTab("shipping");
-</script>
 </head>
 <body>
-	<fmt:setLocale value="vi_VN" />
+    <fmt:setLocale value="vi_VN" />
 
-	<%@ include file="/customer/header.jsp"%>
+    <%-- Include header đã style --%>
+    <%@ include file="/customer/header.jsp"%>
 
-	<!-- Các nút chuyển tab -->
-	<div class="tab-buttons">
-		<button id="shipping-btn" class="tab-button"
-			onclick="openTab('shipping')">🚚 Đang vận chuyển</button>
-		<button id="review-btn" class="tab-button" onclick="openTab('review')">📝
-			Đánh giá</button>
-		<button id="completed-btn" class="tab-button"
-			onclick="openTab('completed')">✅ Đã giao</button>
-	</div>
+    <div class="container mt-4 mb-5">
+        <h2 class="mb-4 text-center fw-bold">Đơn hàng của tôi</h2>
 
-	<!-- Tab: Đang vận chuyển -->
-	<div id="shipping" class="tab-content">
-		<c:if test="${empty processingOrders}">
-			<p>Không có đơn hàng nào đang vận chuyển.</p>
-		</c:if>
-		<c:forEach var="order" items="${processingOrders}">
-			<div class="order-block">
-				<p>
-					<strong>Mã đơn:</strong> ${order.id} | <strong>Ngày đặt:</strong>
-					${order.createdAt} | <strong>Trạng thái:</strong> ${order.status}
-				</p>
-				<table>
-					<tr>
-						<th>Sản phẩm</th>
-						<th>Số lượng</th>
-						<th>Giá</th>
-					</tr>
-					<c:forEach var="op" items="${order.orderProducts}">
-						<tr>
-							<td>${op.product.name}</td>
-							<td>${op.quantity}</td>
-							<td><fmt:formatNumber value="${op.product.price}"
-									type="number" groupingUsed="true" /> VNĐ</td>
-						</tr>
-					</c:forEach>
-				</table>
+        <ul class="nav nav-tabs nav-fill mb-3" id="orderTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="shipping-tab" data-bs-toggle="tab" data-bs-target="#shipping-tab-pane" type="button" role="tab" aria-controls="shipping-tab-pane" aria-selected="true">
+                    <i class="bi bi-truck"></i> Đang vận chuyển
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="review-tab" data-bs-toggle="tab" data-bs-target="#review-tab-pane" type="button" role="tab" aria-controls="review-tab-pane" aria-selected="false">
+                    <i class="bi bi-pencil-square"></i> Chờ đánh giá
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="completed-tab" data-bs-toggle="tab" data-bs-target="#completed-tab-pane" type="button" role="tab" aria-controls="completed-tab-pane" aria-selected="false">
+                    <i class="bi bi-check2-circle"></i> Đã giao
+                </button>
+            </li>
+        </ul>
 
-				<form method="post">
-					<input type="hidden" name="id" value="${order.id}"> <input
-						type="hidden" name="action" value="received">
-					<button type="submit">Đã nhận hàng</button>
-				</form>
-			</div>
-		</c:forEach>
-	</div>
+        <div class="tab-content" id="orderTabContent">
 
-	<!-- Tab: Đánh giá -->
-	<div id="review" class="tab-content">
-		<c:if test="${empty reviewProducts}">
-			<p>Không có sản phẩm nào chờ đánh giá.</p>
-		</c:if>
-		<c:forEach var="op" items="${reviewProducts}">
-			<div class="order-block">
-				<p>
-					<strong>Sản phẩm:</strong> ${op.product.name} | <strong>Số
-						lượng:</strong> ${op.quantity} | <strong>Giá:</strong>
-					<fmt:formatNumber value="${op.product.price}" type="number"
-						groupingUsed="true" />
-					VNĐ
-				</p>
-				<form method="post">
-					<input type="hidden" name="id" value="${op.id}"> <input
-						type="hidden" name="action" value="review"> <input
-						type="text" name="review" placeholder="Viết đánh giá...">
-					<button type="submit">Gửi đánh giá</button>
-				</form>
-			</div>
-		</c:forEach>
-	</div>
+            <div class="tab-pane fade show active" id="shipping-tab-pane" role="tabpanel" aria-labelledby="shipping-tab" tabindex="0">
+                <c:choose>
+                    <c:when test="${empty processingOrders}">
+                        <div class="alert alert-info text-center" role="alert">
+                            Không có đơn hàng nào đang vận chuyển.
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <c:forEach var="order" items="${processingOrders}">
+                            <div class="card shadow-sm mb-3 order-card">
+                                <div class="card-header bg-white">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span><strong>Mã đơn:</strong> #${order.id}</span>
+                                        <span class="badge bg-primary">${order.status}</span>
+                                    </div>
+                                    <small class="text-muted">Ngày đặt: <fmt:formatDate value="${order.createdAt}" pattern="dd/MM/yyyy HH:mm"/></small>
+                                </div>
+                                <div class="card-body p-0"> <%-- p-0 để table sát viền --%>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-striped mb-0">
+                                            <thead>
+                                                <tr>
+                                                    <th>Sản phẩm</th>
+                                                    <th class="text-center">Số lượng</th>
+                                                    <th class="text-end">Đơn giá</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="op" items="${order.orderProducts}">
+                                                    <tr>
+                                                        <td>${op.product.name}</td>
+                                                        <td class="text-center">${op.quantity}</td>
+                                                        <td class="text-end">
+                                                            <fmt:formatNumber value="${op.product.price}" type="currency" currencySymbol="₫" groupingUsed="true" maxFractionDigits="0"/>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-white text-end">
+                                    <%-- Form xác nhận đã nhận hàng --%>
+                                    <form method="post" action="${pageContext.request.contextPath}/MyOrder" class="d-inline-block"> <%-- Trỏ action về servlet MyOrder --%>
+                                        <input type="hidden" name="orderId" value="${order.id}">
+                                        <input type="hidden" name="action" value="received">
+                                        <button type="submit" class="btn btn-success btn-sm">
+                                            <i class="bi bi-check-lg"></i> Đã nhận hàng
+                                        </button>
+                                    </form>
+                                    <%-- Thêm nút xem chi tiết nếu cần --%>
+                                    <%-- <a href="#" class="btn btn-outline-secondary btn-sm">Xem chi tiết</a> --%>
+                                </div>
+                            </div>
+                        </c:forEach>
+                    </c:otherwise>
+                </c:choose>
+            </div>
 
-	<!-- Tab: Đã giao -->
-	<div id="completed" class="tab-content">
-		<c:if test="${empty completedOrders}">
-			<p>Bạn chưa có đơn hàng nào đã giao.</p>
-		</c:if>
-		<c:forEach var="order" items="${completedOrders}">
-			<div class="order-block">
-				<p>
-					<strong>Mã đơn:</strong> ${order.id} | <strong>Ngày hoàn
-						thành:</strong> ${order.createdAt}
-				</p>
-				<table>
-					<tr>
-						<th>Sản phẩm</th>
-						<th>Số lượng</th>
-						<th>Đơn giá</th>
-					</tr>
-					<c:forEach var="op" items="${order.orderProducts}">
-						<tr>
-							<td>${op.product.name}</td>
-							<td>${op.quantity}</td>
-							<td><fmt:formatNumber value="${op.product.price}"
-									type="number" groupingUsed="true" /> VNĐ</td>
-						</tr>
-					</c:forEach>
-				</table>
-			</div>
-		</c:forEach>
-	</div>
+            <div class="tab-pane fade" id="review-tab-pane" role="tabpanel" aria-labelledby="review-tab" tabindex="0">
+                 <c:choose>
+                    <c:when test="${empty reviewProducts}">
+                        <div class="alert alert-info text-center" role="alert">
+                             Không có sản phẩm nào chờ đánh giá.
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <c:forEach var="op" items="${reviewProducts}">
+                            <div class="card shadow-sm mb-3 order-card">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <h5 class="card-title">${op.product.name}</h5>
+                                            <p class="card-text mb-1">
+                                                <small class="text-muted">Số lượng: ${op.quantity} | Giá:
+                                                    <fmt:formatNumber value="${op.product.price}" type="currency" currencySymbol="₫" groupingUsed="true" maxFractionDigits="0"/>
+                                                </small>
+                                            </p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <%-- Form gửi đánh giá --%>
+                                            <form method="post" action="${pageContext.request.contextPath}/MyOrder"> <%-- Trỏ action về servlet MyOrder --%>
+                                                <input type="hidden" name="orderProductId" value="${op.id}"> <%-- Gửi ID của OrderProduct --%>
+                                                <input type="hidden" name="action" value="review">
+                                                <div class="input-group input-group-sm">
+                                                    <input type="text" class="form-control" name="review" placeholder="Viết đánh giá của bạn..." required>
+                                                    <button type="submit" class="btn btn-primary">
+                                                         <i class="bi bi-send"></i> Gửi
+                                                    </button>
+                                                </div>
+                                                 <%-- TODO: Thêm hệ thống sao đánh giá nếu cần --%>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </c:forEach>
+                     </c:otherwise>
+                </c:choose>
+            </div>
+
+            <div class="tab-pane fade" id="completed-tab-pane" role="tabpanel" aria-labelledby="completed-tab" tabindex="0">
+                 <c:choose>
+                    <c:when test="${empty completedOrders}">
+                         <div class="alert alert-info text-center" role="alert">
+                             Bạn chưa có đơn hàng nào hoàn thành.
+                        </div>
+                    </c:when>
+                    <c:otherwise>
+                        <c:forEach var="order" items="${completedOrders}">
+                             <div class="card shadow-sm mb-3 order-card">
+                                <div class="card-header bg-white">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span><strong>Mã đơn:</strong> #${order.id}</span>
+                                        <span class="badge bg-success">Đã giao</span> <%-- Hoặc lấy ${order.status} --%>
+                                    </div>
+                                    <small class="text-muted">Ngày giao: <fmt:formatDate value="${order.createdAt}" pattern="dd/MM/yyyy HH:mm"/></small> <%-- Nên có cột updated_at hoặc completed_at --%>
+                                </div>
+                                <div class="card-body p-0">
+                                     <div class="table-responsive">
+                                        <table class="table table-sm table-striped mb-0">
+                                             <thead>
+                                                <tr>
+                                                    <th>Sản phẩm</th>
+                                                    <th class="text-center">Số lượng</th>
+                                                    <th class="text-end">Đơn giá</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <c:forEach var="op" items="${order.orderProducts}">
+                                                    <tr>
+                                                        <td>${op.product.name}</td>
+                                                        <td class="text-center">${op.quantity}</td>
+                                                        <td class="text-end">
+                                                            <fmt:formatNumber value="${op.product.price}" type="currency" currencySymbol="₫" groupingUsed="true" maxFractionDigits="0"/>
+                                                        </td>
+                                                    </tr>
+                                                </c:forEach>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <%-- Có thể thêm footer nếu cần nút Mua lại, Xem đánh giá... --%>
+                            </div>
+                        </c:forEach>
+                    </c:otherwise>
+                </c:choose>
+            </div>
+        </div> <%-- End Tab Content --%>
+    </div> <%-- End Container --%>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+    <%-- Không cần JavaScript tự viết để chuyển tab nữa --%>
 
 </body>
 </html>
