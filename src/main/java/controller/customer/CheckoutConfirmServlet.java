@@ -1,5 +1,6 @@
 package controller.customer;
 
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -17,6 +18,7 @@ import database.ProductDAO;
 
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -75,13 +77,20 @@ public class CheckoutConfirmServlet extends HttpServlet {
 			op.setProduct(c.getProduct());
 			op.setQuantity(c.getQuantity());
 			orderProducts.add(op);
-			ProductDAO.decreaseStock(c.getProduct().getId(), c.getQuantity());
-			// xoa cac sp trong cart da mua
+			try {
+			    ProductDAO.decreaseStock(c.getProduct().getId(), c.getQuantity());
+			} catch (SQLException e) {
+			    e.printStackTrace();
+			    request.setAttribute("error", "Lỗi: Không thể cập nhật kho cho sản phẩm " + c.getProduct().getName() + ". Vui lòng thử lại.");
+			    
+			    RequestDispatcher rd = request.getRequestDispatcher("/customer/viewcart.jsp"); // Hoặc /checkoutConfirm.jsp
+			    rd.forward(request, response);
+			    return; 
+			}
 			CartDAO.deleteByUserIdAndProductId(user.getId(), c.getProduct().getId());
 		}
 		OrderProductDAO.insert((ArrayList<OrderProduct>) orderProducts);
 
-		// xoa khoi session
 		List<Cart> sessionCart = (List<Cart>) session.getAttribute("cart");
 		List<Cart> newSessionCart = new ArrayList<Cart>();
 		if (sessionCart != null) {

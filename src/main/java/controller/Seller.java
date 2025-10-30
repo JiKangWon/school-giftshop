@@ -24,8 +24,11 @@ import java.nio.file.Path; // Thêm import này
 import java.nio.file.Paths; // Thêm import này
 import java.nio.file.StandardCopyOption; // Thêm import này
 import java.sql.SQLException; // Thêm nếu ProductDAO.insert ném ra
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList; // Thêm import này
 import java.util.Collection; // Thêm import này
 import java.util.HashMap; // Thêm import này
@@ -254,10 +257,67 @@ public class Seller extends HttpServlet {
                 viewName = "orders.jsp"; // Tên view JSP
                 break;
             }
-            case "/report":
-                // Tương ứng với chức năng "Báo cáo doanh thu" 
-                viewName = "report.jsp"; // Bạn sẽ tạo file này sau
+            case "/report": {
+                try {
+                    // 1. Xác định khoảng thời gian (Mặc định là tháng hiện tại)
+                    LocalDate now = LocalDate.now();
+                    LocalDate startOfMonth = now.withDayOfMonth(1);
+                    LocalDate endOfMonth = now.withDayOfMonth(now.lengthOfMonth());
+
+                    String paramStart = request.getParameter("startDate"); // yyyy-MM-dd
+                    String paramEnd = request.getParameter("endDate");     // yyyy-MM-dd
+
+                    try {
+                        if (paramStart != null && !paramStart.isEmpty()) {
+                            startOfMonth = LocalDate.parse(paramStart);
+                        }
+                        if (paramEnd != null && !paramEnd.isEmpty()) {
+                            endOfMonth = LocalDate.parse(paramEnd);
+                        }
+                    } catch (DateTimeParseException e) {
+                        System.err.println("Lỗi parse ngày, dùng ngày mặc định: " + e.getMessage());
+                    }
+
+                    // Chuyển LocalDate sang LocalDateTime (từ đầu ngày start đến cuối ngày end)
+                    LocalDateTime startDate = startOfMonth.atStartOfDay(); // 00:00:00
+                    LocalDateTime endDate = endOfMonth.atTime(LocalTime.MAX);   // 23:59:59.99...
+
+                    // 2. Load dữ liệu (dùng hàm DAO mới)
+                    List<Order> completedOrders = OrderDAO.getCompletedOrdersByDateRange(startDate, endDate);
+
+                    // 3. Tính toán thống kê
+                    BigDecimal totalRevenue = BigDecimal.ZERO;
+                    int totalOrdersCount = 0;
+                    
+                    // Tạo List<Map> để fix lỗi hiển thị LocalDateTime (giống trang Orders)
+                    List<Map<String, Object>> formattedOrders = new ArrayList<>();
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+                    for (Order order : completedOrders) {
+                        totalRevenue = totalRevenue.add(order.getTotalAmount()); // Cộng dồn doanh thu
+                        totalOrdersCount++; // Đếm số đơn
+                        
+                        // Thêm vào list đã format để gửi sang JSP
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("order", order);
+                        map.put("createdAtFormatted", order.getCreatedAt().format(formatter));
+                        formattedOrders.add(map);
+                    }
+
+                    // 4. Gửi dữ liệu thống kê sang JSP
+                    request.setAttribute("startDate", startOfMonth.toString()); // Gửi lại yyyy-MM-dd
+                    request.setAttribute("endDate", endOfMonth.toString());   // Gửi lại yyyy-MM-dd
+                    request.setAttribute("totalRevenue", totalRevenue);
+                    request.setAttribute("totalOrdersCount", totalOrdersCount);
+                    request.setAttribute("reportOrders", formattedOrders); // Gửi list đã format
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    request.setAttribute("error", "Không thể tải báo cáo doanh thu.");
+                }
+                viewName = "report.jsp"; // Tên file JSP
                 break;
+            }
             case "/toggle-status": { // Thêm case mới
                 try {
                     // 1. Lấy ID sản phẩm từ URL

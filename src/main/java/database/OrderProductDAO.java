@@ -363,5 +363,50 @@ public class OrderProductDAO {
         }
         return arr;
     }
+    public static List<OrderProduct> getReviewableProducts(long userId) {
+        List<OrderProduct> arr = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        
+        // Lấy các order_products có đơn hàng (order) thuộc user_id, 
+        // status đơn hàng là 'completed', và review của sản phẩm là NULL
+        String sql = "SELECT op.* FROM dbo.order_products op " +
+                     "JOIN dbo.orders o ON op.order_id = o.id " +
+                     "WHERE o.user_id = ? AND o.status = 'completed' AND op.review IS NULL";
+        
+        try {
+            conn = JDBCUtil.getConnection();
+            st = conn.prepareStatement(sql);
+            st.setLong(1, userId);
+            rs = st.executeQuery();
+            
+            while (rs.next()) {
+                // Lấy thông tin từ ResultSet
+                long opId = rs.getLong("id");
+                long orderId = rs.getLong("order_id");
+                long productId = rs.getLong("product_id");
+                int quantity = rs.getInt("quantity");
+                String review = rs.getString("review");
+                LocalDateTime receivedAt = rs.getObject("receivedAt", LocalDateTime.class);
+                String currentLocation = rs.getString("currentLocation");
+
+                // SỬ DỤNG CÁC HÀM DAO CŨ (THEO YÊU CẦU)
+                Order order = OrderDAO.selectById(orderId);
+                Product product = ProductDAO.selectById(productId);
+
+                // Tạo đối tượng OrderProduct
+                OrderProduct op = new OrderProduct(opId, order, product, quantity, review, receivedAt, currentLocation);
+                arr.add(op);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return arr;
+    }
 
 }

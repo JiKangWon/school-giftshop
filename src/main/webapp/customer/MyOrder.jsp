@@ -1,6 +1,7 @@
-<%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
-<%@ taglib uri="jakarta.tags.core" prefix="c" %> <%-- URI mới --%>
-<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %> <%-- URI mới --%>
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib uri="jakarta.tags.core" prefix="c" %>
+<%@ taglib uri="jakarta.tags.fmt" prefix="fmt" %>
 <!DOCTYPE html>
 <html lang="vi">
 <head>
@@ -17,7 +18,7 @@
         font-weight: 500;
     }
     .order-card table {
-        margin-bottom: 0; /* Bỏ margin đáy mặc định của table trong card */
+        margin-bottom: 0;
     }
 </style>
 </head>
@@ -58,16 +59,19 @@
                         </div>
                     </c:when>
                     <c:otherwise>
-                        <c:forEach var="order" items="${processingOrders}">
+                        <%-- VÒNG LẶP 1: ĐANG VẬN CHUYỂN --%>
+                        <c:forEach var="entry" items="${processingOrders}">
+                            <c:set var="order" value="${entry.order}" /> <%-- Lấy order từ map --%>
                             <div class="card shadow-sm mb-3 order-card">
                                 <div class="card-header bg-white">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span><strong>Mã đơn:</strong> #${order.id}</span>
                                         <span class="badge bg-primary">${order.status}</span>
                                     </div>
-                                    <small class="text-muted">Ngày đặt: <fmt:formatDate value="${order.createdAt}" pattern="dd/MM/yyyy HH:mm"/></small>
+                                    <%-- SỬA LỖI: Dùng biến đã format --%>
+                                    <small class="text-muted">Ngày đặt: ${entry.createdAtFormatted}</small>
                                 </div>
-                                <div class="card-body p-0"> <%-- p-0 để table sát viền --%>
+                                <div class="card-body p-0">
                                     <div class="table-responsive">
                                         <table class="table table-sm table-striped mb-0">
                                             <thead>
@@ -92,16 +96,14 @@
                                     </div>
                                 </div>
                                 <div class="card-footer bg-white text-end">
-                                    <%-- Form xác nhận đã nhận hàng --%>
-                                    <form method="post" action="${pageContext.request.contextPath}/MyOrder" class="d-inline-block"> <%-- Trỏ action về servlet MyOrder --%>
+                                    <%-- Form xác nhận đã nhận hàng (Trỏ về MyOrderServlet) --%>
+                                    <form method="post" action="${pageContext.request.contextPath}/MyOrder" class="d-inline-block">
                                         <input type="hidden" name="orderId" value="${order.id}">
                                         <input type="hidden" name="action" value="received">
                                         <button type="submit" class="btn btn-success btn-sm">
                                             <i class="bi bi-check-lg"></i> Đã nhận hàng
                                         </button>
                                     </form>
-                                    <%-- Thêm nút xem chi tiết nếu cần --%>
-                                    <%-- <a href="#" class="btn btn-outline-secondary btn-sm">Xem chi tiết</a> --%>
                                 </div>
                             </div>
                         </c:forEach>
@@ -117,22 +119,25 @@
                         </div>
                     </c:when>
                     <c:otherwise>
-                        <c:forEach var="op" items="${reviewProducts}">
+                         <%-- VÒNG LẶP 2: ĐÁNH GIÁ (Dùng 'entry' và 'item') --%>
+                        <c:forEach var="entry" items="${reviewProducts}">
+                            <c:set var="item" value="${entry.item}" /> <%-- Lấy item từ map --%>
                             <div class="card shadow-sm mb-3 order-card">
                                 <div class="card-body">
                                     <div class="row align-items-center">
                                         <div class="col-md-8">
-                                            <h5 class="card-title">${op.product.name}</h5>
+                                            <h5 class="card-title">${item.product.name}</h5>
                                             <p class="card-text mb-1">
-                                                <small class="text-muted">Số lượng: ${op.quantity} | Giá:
-                                                    <fmt:formatNumber value="${op.product.price}" type="currency" currencySymbol="₫" groupingUsed="true" maxFractionDigits="0"/>
+                                                <small class="text-muted">Số lượng: ${item.quantity} | Giá:
+                                                    <fmt:formatNumber value="${item.product.price}" type="currency" currencySymbol="₫" groupingUsed="true" maxFractionDigits="0"/>
                                                 </small>
                                             </p>
+                                             <small class="text-muted">Ngày nhận: ${entry.receivedAtFormatted}</small> <%-- SỬA LỖI: Dùng biến đã format --%>
                                         </div>
                                         <div class="col-md-4">
-                                            <%-- Form gửi đánh giá --%>
-                                            <form method="post" action="${pageContext.request.contextPath}/MyOrder"> <%-- Trỏ action về servlet MyOrder --%>
-                                                <input type="hidden" name="orderProductId" value="${op.id}"> <%-- Gửi ID của OrderProduct --%>
+                                            <%-- Form gửi đánh giá (Trỏ về MyOrderServlet) --%>
+                                            <form method="post" action="${pageContext.request.contextPath}/MyOrder">
+                                                <input type="hidden" name="orderProductId" value="${item.id}"> <%-- Gửi ID của OrderProduct --%>
                                                 <input type="hidden" name="action" value="review">
                                                 <div class="input-group input-group-sm">
                                                     <input type="text" class="form-control" name="review" placeholder="Viết đánh giá của bạn..." required>
@@ -140,7 +145,6 @@
                                                          <i class="bi bi-send"></i> Gửi
                                                     </button>
                                                 </div>
-                                                 <%-- TODO: Thêm hệ thống sao đánh giá nếu cần --%>
                                             </form>
                                         </div>
                                     </div>
@@ -159,14 +163,17 @@
                         </div>
                     </c:when>
                     <c:otherwise>
-                        <c:forEach var="order" items="${completedOrders}">
+                         <%-- VÒNG LẶP 3: ĐÃ GIAO --%>
+                        <c:forEach var="entry" items="${completedOrders}">
+                             <c:set var="order" value="${entry.order}" /> <%-- Lấy order từ map --%>
                              <div class="card shadow-sm mb-3 order-card">
                                 <div class="card-header bg-white">
                                     <div class="d-flex justify-content-between align-items-center">
                                         <span><strong>Mã đơn:</strong> #${order.id}</span>
-                                        <span class="badge bg-success">Đã giao</span> <%-- Hoặc lấy ${order.status} --%>
+                                        <span class="badge bg-success">${order.status}</span>
                                     </div>
-                                    <small class="text-muted">Ngày giao: <fmt:formatDate value="${order.createdAt}" pattern="dd/MM/yyyy HH:mm"/></small> <%-- Nên có cột updated_at hoặc completed_at --%>
+                                    <%-- SỬA LỖI: Dùng biến đã format --%>
+                                    <small class="text-muted">Ngày hoàn thành: ${entry.completedAtFormatted}</small> 
                                 </div>
                                 <div class="card-body p-0">
                                      <div class="table-responsive">
@@ -192,7 +199,6 @@
                                         </table>
                                     </div>
                                 </div>
-                                <%-- Có thể thêm footer nếu cần nút Mua lại, Xem đánh giá... --%>
                             </div>
                         </c:forEach>
                     </c:otherwise>
@@ -202,8 +208,6 @@
     </div> <%-- End Container --%>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-
-    <%-- Không cần JavaScript tự viết để chuyển tab nữa --%>
 
 </body>
 </html>

@@ -286,4 +286,102 @@ public class OrderDAO {
 	    }
 	    return res;
 	}
+	public static List<Order> getCompletedOrdersByDateRange(LocalDateTime start, LocalDateTime end) {
+        List<Order> orderList = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        
+        // Lấy các đơn hàng có status = 'completed' và nằm trong khoảng thời gian
+        String sql = "SELECT * FROM dbo.orders " +
+                     "WHERE status = 'completed' AND createdAt BETWEEN ? AND ? " +
+                     "ORDER BY createdAt DESC";
+        
+        try {
+            conn = JDBCUtil.getConnection();
+            st = conn.prepareStatement(sql);
+            
+            // Gán tham số ngày giờ (dùng setObject cho LocalDateTime)
+            st.setObject(1, start);
+            st.setObject(2, end);
+            
+            rs = st.executeQuery();
+            
+            // Lặp qua các đơn hàng
+            while (rs.next()) {
+                long orderId = rs.getLong("id");
+                long userId = rs.getLong("user_id");
+                LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
+                String status = rs.getString("status");
+                BigDecimal totalAmount = rs.getBigDecimal("total_amount");
+
+                // SỬ DỤNG CÁC HÀM DAO CŨ (KHÔNG THAY ĐỔI)
+                // 1. Lấy thông tin User (Khách hàng)
+                User customer = UserDAO.selectById(userId); 
+                
+                // 2. Lấy danh sách sản phẩm (Sử dụng hàm selectByOrderId hiện có)
+                List<OrderProduct> items = OrderProductDAO.selectByOrderId(orderId);
+
+                // Tạo đối tượng Order đầy đủ
+                Order order = new Order();
+                order.setId(orderId);
+                order.setUser(customer); // Gán đối tượng User
+                order.setCreatedAt(createdAt);
+                order.setStatus(status);
+                order.setTotalAmount(totalAmount);
+                order.setOrderProducts(items); // Gán danh sách sản phẩm
+
+                orderList.add(order);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // Đóng tài nguyên
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return orderList;
+    }
+	public static List<Order> selectByUserIdAndStatus(long userId, String status) {
+        List<Order> orderList = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        
+        String sql = "SELECT * FROM dbo.orders WHERE user_id = ? AND status = ? ORDER BY createdAt DESC";
+        
+        try {
+            conn = JDBCUtil.getConnection();
+            st = conn.prepareStatement(sql);
+            st.setLong(1, userId);
+            st.setString(2, status);
+            rs = st.executeQuery();
+            
+            while (rs.next()) {
+                long orderId = rs.getLong("id");
+                LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
+                BigDecimal totalAmount = rs.getBigDecimal("total_amount");
+
+                // Lấy User (theo logic DAO cũ của bạn)
+                User customer = UserDAO.selectById(userId); 
+
+                Order order = new Order();
+                order.setId(orderId);
+                order.setUser(customer);
+                order.setCreatedAt(createdAt);
+                order.setStatus(status);
+                order.setTotalAmount(totalAmount);
+                // KHÔNG set orderProducts ở đây, Servlet sẽ làm
+                orderList.add(order);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return orderList;
+    }
 }
