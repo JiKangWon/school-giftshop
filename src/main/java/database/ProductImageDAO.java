@@ -3,6 +3,7 @@ package database;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import model.Product;
@@ -61,17 +62,13 @@ public class ProductImageDAO {
 		int res = 0;
 		try {
 			Connection conn = JDBCUtil.getConnection();
-			String sql = "INSERT INTO product_images(id, product_id, imgLink) VALUES (?,?,?)";
+			String sql = "INSERT INTO product_images(product_id, imgLink) VALUES (?,?)";
 			PreparedStatement st = conn.prepareStatement(sql);
-			if (pi.getId() != null)
-				st.setLong(1, pi.getId());
+			if (pi.getProduct() != null && pi.getProduct().getId() != null)
+				st.setLong(1, pi.getProduct().getId());
 			else
 				st.setNull(1, java.sql.Types.BIGINT);
-			if (pi.getProduct() != null && pi.getProduct().getId() != null)
-				st.setLong(2, pi.getProduct().getId());
-			else
-				st.setNull(2, java.sql.Types.BIGINT);
-			st.setString(3, pi.getImgLink());
+			st.setString(2, pi.getImgLink());
 			res = st.executeUpdate();
 			st.close();
 			JDBCUtil.closeConnection(conn);
@@ -80,7 +77,39 @@ public class ProductImageDAO {
 		}
 		return res;
 	}
+	public static int insert(long productId, String imgLink) throws SQLException {
+        int result = 0;
+        Connection conn = null;
+        PreparedStatement st = null;
 
+        // Câu lệnh SQL INSERT vào bảng product_images
+        // Đảm bảo tên bảng và tên cột khớp với CSDL của bạn (product_id, imgLink)
+        String sql = "INSERT INTO dbo.product_images (product_id, imgLink) VALUES (?, ?)";
+
+        try {
+            conn = JDBCUtil.getConnection(); // Lấy kết nối
+            st = conn.prepareStatement(sql); // Chuẩn bị câu lệnh
+
+            // Gán giá trị cho các tham số (?)
+            st.setLong(1, productId);   // Tham số thứ nhất: product_id
+            st.setString(2, imgLink); // Tham số thứ hai: imgLink
+
+            // Thực thi câu lệnh INSERT và lấy số dòng bị ảnh hưởng
+            result = st.executeUpdate();
+
+        } finally {
+            // Đóng PreparedStatement và Connection trong khối finally để đảm bảo tài nguyên được giải phóng
+            try {
+                if (st != null) {
+                    st.close();
+                }
+            } catch (SQLException e) {
+                e.printStackTrace(); // Ghi log lỗi nếu không đóng được statement
+            }
+            JDBCUtil.closeConnection(conn); // Đóng kết nối
+        }
+        return result; // Trả về số dòng đã được thêm
+    }
 	public static int insert(ArrayList<ProductImage> arr) {
 		int count = 0;
 		for (ProductImage p : arr)

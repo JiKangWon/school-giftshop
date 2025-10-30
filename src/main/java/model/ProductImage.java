@@ -12,6 +12,10 @@ public class ProductImage {
         this.product = product;
         this.imgLink = imgLink;
     }
+    public ProductImage(Product product, String imgLink) {
+        this.product = product;
+        this.imgLink = imgLink;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

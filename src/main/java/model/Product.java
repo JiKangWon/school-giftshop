@@ -25,6 +25,14 @@ public class Product {
         this.status = status;
         this.createdAt = createdAt;
     }
+    
+    public Product(Integer stock, BigDecimal price, String name, String description, Category category) {
+        this.stock = stock;
+        this.price = price;
+        this.name = name;
+        this.description = description;
+        this.category = category;
+    }
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

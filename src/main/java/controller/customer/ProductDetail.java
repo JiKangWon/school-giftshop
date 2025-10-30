@@ -45,7 +45,7 @@ public class ProductDetail extends HttpServlet {
 				imgLinks.add(img.getImgLink());
 			}
 			if (imgLinks.isEmpty()) {
-				imgLinks.add("/images/default.jpg");
+				imgLinks.add("/uploads/products/product.png"); 
 			}
 
 			List<OrderProduct> reviews = new ArrayList<>();

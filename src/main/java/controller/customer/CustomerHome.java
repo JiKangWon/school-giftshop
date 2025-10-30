@@ -55,7 +55,7 @@ public class CustomerHome extends HttpServlet {
 				if (!imgs.isEmpty()) {
 					productImages.add(imgs.get(0).getImgLink());
 				} else {
-					productImages.add("/images/default.jpg");
+					productImages.add("/uploads/products/product.png");
 				}
 			}
 

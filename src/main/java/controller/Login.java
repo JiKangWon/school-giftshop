@@ -55,7 +55,6 @@ public class Login extends HttpServlet {
         // 2. Kiểm tra với Database
         password = Encryption.toSHA256(password);
         User user = UserDAO.login(userName, password);
-        System.out.println(user);
         // 3. Xử lý kết quả đăng nhập
         if (user != null) {
             // ĐĂNG NHẬP THÀNH CÔNG

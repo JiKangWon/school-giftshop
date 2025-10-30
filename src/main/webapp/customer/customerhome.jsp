@@ -74,7 +74,7 @@
                     <div class="card h-100 shadow-sm product-card">
                         <a href="${pageContext.request.contextPath}/ProductDetail?id=${p.id}">
                              <%-- Giả sử productImages[loop.index] là URL ảnh --%>
-                            <img src="${productImages[loop.index]}" class="card-img-top" alt="${p.name}">
+                            <img src="${pageContext.request.contextPath}${productImages[loop.index]}" class="card-img-top" alt="${p.name}">
                         </a>
                         <div class="card-body d-flex flex-column">
                             <h5 class="card-title">

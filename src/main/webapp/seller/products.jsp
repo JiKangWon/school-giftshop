@@ -8,7 +8,7 @@
     <h1 class="h2">Quản lý sản phẩm</h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <%-- TODO: Đảm bảo link này trỏ đúng vào servlet (ví dụ: /kenh-ban/add-product) --%>
-        <a href="${pageContext.request.contextPath}/kenh-ban/add-product" class="btn btn-sm btn-primary">
+        <a href="${pageContext.request.contextPath}/seller-page/add-product" class="btn btn-sm btn-primary">
             <i class="bi bi-plus-circle"></i>
             Thêm sản phẩm mới
         </a>
