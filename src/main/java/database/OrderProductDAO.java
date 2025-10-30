@@ -287,5 +287,81 @@ public class OrderProductDAO {
 		}
 		return list;
 	}
+	public static int getTotalOrderProductCount() {
+        int count = 0;
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        try {
+            conn = JDBCUtil.getConnection();
+            String sql = "SELECT COUNT(*) FROM dbo.order_products";
+            st = conn.prepareStatement(sql);
+            rs = st.executeQuery();
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            // Đóng tài nguyên
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return count;
+    }
+
+
+    public static List<OrderProduct> selectAllPaginated(int pageNumber, int pageSize) {
+        List<OrderProduct> arr = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        
+        // Sắp xếp theo ID (mới nhất) và dùng OFFSET...FETCH để phân trang
+        String sql = "SELECT * FROM dbo.order_products " +
+                     "ORDER BY id DESC " +
+                     "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        
+        try {
+            conn = JDBCUtil.getConnection();
+            st = conn.prepareStatement(sql);
+            
+            int offset = (pageNumber - 1) * pageSize;
+            st.setInt(1, offset);
+            st.setInt(2, pageSize);
+            
+            rs = st.executeQuery();
+            
+            // Lặp qua 10 bản ghi OrderProduct của trang này
+            while (rs.next()) {
+                long opId = rs.getLong("id");
+                long orderId = rs.getLong("order_id");
+                long productId = rs.getLong("product_id");
+                int quantity = rs.getInt("quantity");
+                String review = rs.getString("review");
+                LocalDateTime receivedAt = rs.getObject("receivedAt", LocalDateTime.class);
+                String currentLocation = rs.getString("currentLocation");
+
+                // SỬ DỤNG CÁC HÀM DAO CŨ (KHÔNG THAY ĐỔI LOGIC)
+                // 1. Lấy đối tượng Order
+                Order order = OrderDAO.selectById(orderId);
+                // 2. Lấy đối tượng Product
+                Product product = ProductDAO.selectById(productId);
+
+                // Tạo đối tượng OrderProduct bằng constructor hiện có
+                OrderProduct op = new OrderProduct(opId, order, product, quantity, review, receivedAt, currentLocation);
+                
+                arr.add(op);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return arr;
+    }
 
 }

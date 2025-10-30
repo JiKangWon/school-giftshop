@@ -52,7 +52,7 @@
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                             <li><a class="dropdown-item" href="#">Thông tin tài khoản</a></li>
                             <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/logout">Đăng xuất</a></li>
+                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/seller-page/logout">Đăng xuất</a></li>
                         </ul>
                     </li>
                 </ul>

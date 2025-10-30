@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import model.Order;
+import model.OrderProduct;
 import model.User;
 
 public class OrderDAO {
@@ -187,5 +188,102 @@ public class OrderDAO {
 			e.printStackTrace();
 		}
 		return list;
+	}
+
+	public static int getTotalOrderCount() {
+        int count = 0;
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        try {
+            conn = JDBCUtil.getConnection();
+            String sql = "SELECT COUNT(*) FROM dbo.orders";
+            st = conn.prepareStatement(sql);
+            rs = st.executeQuery();
+            if (rs.next()) {
+                count = rs.getInt(1);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return count;
+    }
+	
+	public static List<Order> selectAllWithDetailsPaginated(int pageNumber, int pageSize) {
+        List<Order> orderList = new ArrayList<>();
+        Connection conn = null;
+        PreparedStatement st = null;
+        ResultSet rs = null;
+        
+        // Sắp xếp theo ngày mới nhất và dùng OFFSET...FETCH để phân trang
+        String sql = "SELECT * FROM dbo.orders " +
+                     "ORDER BY createdAt DESC " +
+                     "OFFSET ? ROWS FETCH NEXT ? ROWS ONLY";
+        
+        try {
+            conn = JDBCUtil.getConnection();
+            st = conn.prepareStatement(sql);
+            
+            // Tính toán offset
+            int offset = (pageNumber - 1) * pageSize;
+            st.setInt(1, offset);
+            st.setInt(2, pageSize);
+            
+            rs = st.executeQuery();
+            
+            // Lặp qua 10 đơn hàng của trang này
+            while (rs.next()) {
+                long orderId = rs.getLong("id");
+                long userId = rs.getLong("user_id");
+                LocalDateTime createdAt = rs.getObject("createdAt", LocalDateTime.class);
+                String status = rs.getString("status");
+                BigDecimal totalAmount = rs.getBigDecimal("total_amount");
+
+                // SỬ DỤNG CÁC HÀM DAO CŨ (KHÔNG THAY ĐỔI)
+                // 1. Lấy thông tin User (Khách hàng)
+                User customer = UserDAO.selectById(userId); 
+                
+                // 2. Lấy danh sách sản phẩm (Sử dụng hàm selectByOrderId hiện có)
+                List<OrderProduct> items = OrderProductDAO.selectByOrderId(orderId);
+
+                // Tạo đối tượng Order đầy đủ
+                Order order = new Order();
+                order.setId(orderId);
+                order.setUser(customer); // Gán đối tượng User
+                order.setCreatedAt(createdAt);
+                order.setStatus(status);
+                order.setTotalAmount(totalAmount);
+                order.setOrderProducts(items); // Gán danh sách sản phẩm
+
+                orderList.add(order);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        } finally {
+            try { if (rs != null) rs.close(); } catch (Exception e) { e.printStackTrace(); }
+            try { if (st != null) st.close(); } catch (Exception e) { e.printStackTrace(); }
+            JDBCUtil.closeConnection(conn);
+        }
+        return orderList;
+    }
+	public static int updateStatus(long orderId, String status) {
+	    int res = 0;
+	    try {
+	        Connection conn = JDBCUtil.getConnection();
+	        String sql = "UPDATE dbo.orders SET status = ? WHERE id = ?";
+	        PreparedStatement st = conn.prepareStatement(sql);
+	        st.setString(1, status);
+	        st.setLong(2, orderId);
+	        res = st.executeUpdate();
+	        st.close();
+	        JDBCUtil.closeConnection(conn);
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return res;
 	}
 }

@@ -1,0 +1,12 @@
+USE SCHOOL_GIFTSHOP
+GO
+
+SELECT * FROM products
+GO
+
+SELECT * FROM product_images
+GO
+
+SELECT * FROM users
+GO
+

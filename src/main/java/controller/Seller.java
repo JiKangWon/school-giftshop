@@ -9,6 +9,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.Category;
+import model.Order;
+import model.OrderProduct;
 import model.Product;
 import model.ProductImage;
 import model.User;
@@ -23,6 +25,7 @@ import java.nio.file.Paths; // Thêm import này
 import java.nio.file.StandardCopyOption; // Thêm import này
 import java.sql.SQLException; // Thêm nếu ProductDAO.insert ném ra
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList; // Thêm import này
 import java.util.Collection; // Thêm import này
 import java.util.HashMap; // Thêm import này
@@ -35,6 +38,8 @@ import jakarta.servlet.annotation.MultipartConfig; //
 import jakarta.servlet.http.Part;
 
 import database.CategoryDAO;
+import database.OrderDAO;
+import database.OrderProductDAO;
 import database.ProductDAO;
 
 /**
@@ -83,6 +88,63 @@ public class Seller extends HttpServlet {
                 // Tương ứng với chức năng "Lịch sử bán hàng" 
                 viewName = "home.jsp"; 
                 break;
+            case "/logout":
+            	HttpSession sessionToInvalidate = request.getSession(false);
+            	if(sessionToInvalidate!=null) sessionToInvalidate.invalidate();
+            	response.sendRedirect(request.getContextPath()+"/login");
+            	return;
+            case "/delete-product": {
+                String page = request.getParameter("page");
+                if (page == null || page.isBlank()) {
+                    page = "1";
+                }
+                String redirectUrl = request.getContextPath() + "/seller-page/products?page=" + page + "&";
+                try {
+                    // get product id
+                    long productId = Long.parseLong(request.getParameter("id"));
+                    List<ProductImage> imagesToDelete = ProductImageDAO.selectByProductId(productId);
+                    
+                    int result = ProductDAO.deleteById(productId);
+
+                    if (result > 0) {
+                        String uploadPath = getServletContext().getRealPath("uploads/products");
+                        for (ProductImage img : imagesToDelete) {
+                            try {
+                                String relativePath = img.getImgLink(); 
+                                if (relativePath != null && !relativePath.isEmpty()) {
+                                    String fileName = relativePath.substring(relativePath.lastIndexOf('/') + 1);
+                                    Path filePathToDelete = Paths.get(uploadPath + File.separator + fileName);
+                                    Files.deleteIfExists(filePathToDelete);
+                                    System.out.println("DEBUG: Đã xóa file vật lý: " + filePathToDelete);
+                                }
+                            } catch (Exception e) {
+                                System.err.println("Lỗi khi xóa file ảnh " + img.getImgLink() + ": " + e.getMessage());
+                            }
+                        }
+                        // Redirect với thông báo thành công
+                        response.sendRedirect(redirectUrl + "delete=success");
+                    } else {
+                        // Không có dòng nào bị xóa (có thể do ID sai)
+                        response.sendRedirect(redirectUrl + "error=DeleteFailedProductNotFound");
+                    }
+
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    response.sendRedirect(redirectUrl + "error=InvalidProductId");
+                } catch (Exception e) { // Bắt các lỗi SQL khác
+                    e.printStackTrace();
+                    // BẮT LỖI RÀNG BUỘC KHÓA NGOẠI (QUAN TRỌNG)
+                    String errorMessage = e.getMessage();
+                    if (errorMessage != null && errorMessage.contains("FK_order_products_products")) {
+                        // Lỗi ràng buộc khóa ngoại
+                        response.sendRedirect(redirectUrl + "error=DeleteFailedOrderExists");
+                    } else {
+                        // Lỗi chung
+                        response.sendRedirect(redirectUrl + "error=DeleteFailedInternalError");
+                    }
+                }
+                return;
+            }
             case "/products":
                 try {
                     // 1. Định nghĩa số sản phẩm mỗi trang
@@ -130,9 +192,68 @@ public class Seller extends HttpServlet {
                 }
                 viewName = "add_product.jsp"; // Tên file JSP chứa form
                 break;
-            case "/orders":
-                viewName = "orders.jsp"; // Bạn sẽ tạo file này sau
+            case "/orders": {
+                try {
+                    // 1. Định nghĩa số chi tiết đơn hàng mỗi trang (theo yêu cầu của bạn)
+                    int pageSize = 10;
+                    
+                    // 2. Lấy số trang hiện tại từ URL (mặc định là trang 1)
+                    int currentPage = 1;
+                    if (request.getParameter("page") != null) {
+                        try {
+                            currentPage = Integer.parseInt(request.getParameter("page"));
+                        } catch (NumberFormatException e) {
+                            currentPage = 1; // Nếu nhập bậy thì về trang 1
+                        }
+                    }
+
+                    // 3. Lấy TỔNG số chi tiết đơn hàng (dùng hàm DAO mới)
+                    int totalItems = OrderProductDAO.getTotalOrderProductCount();
+                    
+                    // 4. Tính TỔNG số trang
+                    int totalPages = (int) Math.ceil((double) totalItems / pageSize);
+                    
+                    // 5. Lấy danh sách chi tiết đơn hàng CHỈ CỦA TRANG HIỆN TẠI (dùng hàm DAO mới)
+                    List<OrderProduct> orderProductList = OrderProductDAO.selectAllPaginated(currentPage, pageSize);
+                    
+                    // 6. [FIX LỖI] Xử lý lỗi `LocalDateTime` (Giống lần trước)
+                    // Chuyển đổi List<OrderProduct> thành List<Map> để định dạng ngày giờ
+                    List<Map<String, Object>> formattedList = new ArrayList<>();
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                    
+                    for (OrderProduct op : orderProductList) {
+                        Map<String, Object> map = new HashMap<>();
+                        map.put("item", op); // Đặt đối tượng OrderProduct vào map
+                        
+                        // Định dạng ngày đặt hàng (từ Order)
+                        if (op.getOrder() != null && op.getOrder().getCreatedAt() != null) {
+                            map.put("orderCreatedAtFormatted", op.getOrder().getCreatedAt().format(formatter));
+                        } else {
+                            map.put("orderCreatedAtFormatted", "N/A");
+                        }
+                        
+                        // Định dạng ngày nhận hàng (từ OrderProduct)
+                        if (op.getReceivedAt() != null) {
+                             map.put("receivedAtFormatted", op.getReceivedAt().format(formatter));
+                        } else {
+                             map.put("receivedAtFormatted", "N/A");
+                        }
+                        
+                        formattedList.add(map);
+                    }
+                    
+                    // 7. Đặt các biến vào request để JSP sử dụng
+                    request.setAttribute("orderProductList", formattedList); // Gửi list đã format
+                    request.setAttribute("totalPages", totalPages);
+                    request.setAttribute("currentPage", currentPage);
+                    
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    request.setAttribute("error", "Không thể tải lịch sử bán hàng.");
+                }
+                viewName = "orders.jsp"; // Tên view JSP
                 break;
+            }
             case "/report":
                 // Tương ứng với chức năng "Báo cáo doanh thu" 
                 viewName = "report.jsp"; // Bạn sẽ tạo file này sau
@@ -162,6 +283,40 @@ public class Seller extends HttpServlet {
                 }
                 return; // Dừng thực thi sau khi redirect
             }
+            // TODO: Update product
+            case "/update-product": { 
+                String viewNameJSP = "update_product.jsp"; // Tên file JSP
+                try {
+                    // get product by id
+                    long productId = Long.parseLong(request.getParameter("id"));
+                    Product product = ProductDAO.selectById(productId);
+                    
+                    // When product not found
+                    if (product == null) {
+                        response.sendRedirect(request.getContextPath() + "/seller-page/products?error=ProductNotFound");
+                        return;
+                    }
+                    
+                    // get all category
+                    List<Category> categories = CategoryDAO.selectAll();
+                    
+                    // get product images of product
+                    List<ProductImage> images = ProductImageDAO.selectByProductId(productId);
+                    
+                    // send data to view
+                    request.setAttribute("product", product); 
+                    request.setAttribute("categories", categories); 
+                    request.setAttribute("currentImages", images); 
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    response.sendRedirect(request.getContextPath() + "/seller-page/products?error=LoadError");
+                    return;
+                }
+                request.setAttribute("view", viewNameJSP);
+                RequestDispatcher rd = getServletContext().getRequestDispatcher("/seller/base.jsp");
+                rd.forward(request, response);
+                return; 
+            } 
             default:
                 viewName = "home.jsp";
         }
@@ -381,9 +536,156 @@ public class Seller extends HttpServlet {
 				forwardWithError(request, response, "Đã xảy ra lỗi khi đăng sản phẩm: " + e.getMessage(), oldInput);
 			}
 
-		} else {
-			 // Xử lý các action POST khác nếu có (ví dụ: cập nhật sản phẩm)
-			 // Tạm thời gọi doGet hoặc báo lỗi
+		}
+		else if ("/update-product".equals(action)) {
+			// check login
+	        HttpSession session = request.getSession();
+	        User seller = (User) session.getAttribute("user");
+	        if (seller == null || seller.getIsSeller() == 0) {
+	             response.sendRedirect(request.getContextPath() + "/login");
+	             return;
+	        }
+
+	        Map<String, String> oldInput = new HashMap<>();
+	        String error = null;
+	        long productId = 0;
+	        Product productToUpdate = null; // product to update
+
+	        // get path of folder 
+	        String uploadPath = getServletContext().getRealPath("uploads/products");
+	        File uploadDir = new File(uploadPath);
+	        if (!uploadDir.exists()) uploadDir.mkdirs();
+
+	        try {
+	            // get form's data
+	            String productIdStr = request.getParameter("productId");
+	            String name = request.getParameter("productName");
+	            String priceStr = request.getParameter("price");
+	            String stockStr = request.getParameter("stock");
+	            String description = request.getParameter("description");
+	            String categoryIdStr = request.getParameter("categoryId");
+	            String status = request.getParameter("status");
+	   
+	            // save old input
+	            oldInput.put("productName", name);
+	            oldInput.put("price", priceStr);
+	            oldInput.put("stock", stockStr);
+	            oldInput.put("description", description);
+	            oldInput.put("categoryId", categoryIdStr);
+	            oldInput.put("status", status);
+
+	            // validation
+	            BigDecimal price = null;
+	            int stock = 0;
+	            int categoryId = 0;
+
+	            try {
+	                productId = Long.parseLong(productIdStr);
+	            } catch (Exception e) {
+	                error = "ID sản phẩm không hợp lệ.";
+	            }	            
+	            if (name == null || name.trim().isEmpty()) error = "Tên không được trống.";
+	            if (error == null && (priceStr == null || priceStr.trim().isEmpty())) error = "Giá không được trống.";
+	            // ... (validate đầy đủ) ...
+
+	            // have validation problem:
+	            if (error != null) {
+	                reloadUpdateForm(request, response, productId, error, oldInput);
+	                return; 
+	            }
+	            
+	            price = new BigDecimal(priceStr.replace(",", ""));
+	            stock = Integer.parseInt(stockStr);
+	            categoryId = Integer.parseInt(categoryIdStr);
+
+	            // get product from db
+	            productToUpdate = ProductDAO.selectById(productId);
+	            if (productToUpdate == null) {
+	                throw new Exception("Không tìm thấy sản phẩm với ID: " + productId);
+	            }
+	            
+	            // update fields 
+	            productToUpdate.setName(name.trim());
+	            productToUpdate.setPrice(price);
+	            productToUpdate.setStock(stock);
+	            productToUpdate.setDescription(description != null ? description.trim() : null);
+	            Category category = new Category();
+	            category.setId(categoryId);
+	            productToUpdate.setCategory(category);
+	            productToUpdate.setStatus(status);
+
+	            // Image handling
+	            // delete old image
+	            String[] imagesToDelete = request.getParameterValues("deleteImages");
+	            if (imagesToDelete != null) {
+	                System.out.println("DEBUG: Đang xóa " + imagesToDelete.length + " ảnh...");
+	                for (String imageIdStr : imagesToDelete) {
+	                    try {
+	                        long imageId = Long.parseLong(imageIdStr);
+	                        
+	                        ProductImage img = ProductImageDAO.selectById(imageId);
+	                        if (img != null) {
+	                           String relativePath = img.getImgLink();
+	                           if(relativePath != null && !relativePath.isEmpty()) {
+	                               String fileName = relativePath.substring(relativePath.lastIndexOf('/') + 1);
+	                               Path filePathToDelete = Paths.get(uploadPath + File.separator + fileName);
+	                               Files.deleteIfExists(filePathToDelete); // Xóa file vật lý
+	                               System.out.println("DEBUG: Đã xóa file vật lý: " + filePathToDelete);
+	                           }
+	                           
+	                           // ***Sử dụng DAO delete(ProductImage pi) hiện có của bạn***
+	                           ProductImageDAO.delete(img); // Xóa trong CSDL
+	                           System.out.println("DEBUG: Đã xóa ảnh khỏi CSDL: ID " + imageId);
+	                        }
+	                    } catch (Exception e) {
+	                         System.err.println("Lỗi khi xóa ảnh ID " + imageIdStr + ": " + e.getMessage());
+	                         // Có thể bỏ qua lỗi xóa ảnh và tiếp tục
+	                    }
+	                }
+	            }
+
+	            // add new product
+	            List<String> uploadedImagePaths = new ArrayList<>();
+	            for (Part part : request.getParts()) {
+	                String fieldName = part.getName();
+	                String fileName = getFileName(part);
+	                if ("productImages".equals(fieldName) && fileName != null && !fileName.isEmpty()) {
+	                    // ... (Logic validate file ảnh, tạo unique name, save file, add to uploadedImagePaths) ...
+	                    // (Giống hệt code add-product)
+	                    String uniqueFileName = UUID.randomUUID().toString() + "_" + fileName;
+	                    Path filePath = Paths.get(uploadPath + File.separator + uniqueFileName);
+	                    try (InputStream fileContent = part.getInputStream()) {
+	                        Files.copy(fileContent, filePath, StandardCopyOption.REPLACE_EXISTING);
+	                         System.out.println("DEBUG: Đã lưu file mới: " + filePath);
+	                    }
+	                    String relativePath = "/" + UPLOAD_DIR.replace(File.separator, "/") + "/" + uniqueFileName;
+	                    uploadedImagePaths.add(relativePath);
+	                }
+	            }
+	            
+	            // Excute update product DB
+	            int updateResult = ProductDAO.update(productToUpdate);
+	            if (updateResult == 0) {
+	                 System.err.println("WARNING: Cập nhật sản phẩm không ảnh hưởng dòng nào (ID: " + productId + ")");
+	            }
+
+	            // Excute add new product image DB
+	            if (!uploadedImagePaths.isEmpty()) {
+	                for (String imgPath : uploadedImagePaths) {
+	                    ProductImageDAO.insert(productId, imgPath);
+	                }
+	                 System.out.println("DEBUG: Đã thêm " + uploadedImagePaths.size() + " ảnh mới vào CSDL.");
+	            }
+
+	            // Success -> redirect 
+	            response.sendRedirect(request.getContextPath() + "/seller-page/products?success=ProductUpdated");
+
+	        } catch (Exception e) {
+	            e.printStackTrace();
+	            // Fail -> forward
+	            reloadUpdateForm(request, response, productId, "Lỗi khi cập nhật: " + e.getMessage(), oldInput);
+	        }       
+        } else {
 			 doGet(request, response);
 		}
 	}
@@ -414,5 +716,38 @@ public class Seller extends HttpServlet {
         }
         return null;
     }
+	private void reloadUpdateForm(HttpServletRequest request, HttpServletResponse response, long productId, String error, Map<String, String> oldInput) throws ServletException, IOException {
+		request.setAttribute("error", error);
+		
+        // Gửi lại dữ liệu cũ (nếu có)
+        if (oldInput != null) {
+		    request.setAttribute("oldInput", oldInput); 
+        }
 
+		try {
+			// Cần load lại danh mục cho dropdown
+			List<Category> categories = CategoryDAO.selectAll();
+			request.setAttribute("categories", categories);
+
+			// Cần load lại thông tin sản phẩm gốc (nếu có)
+            // Ngay cả khi productId = 0 (do lỗi parse), selectById sẽ trả về null
+			Product product = ProductDAO.selectById(productId);
+            if(product != null) {
+			    request.setAttribute("product", product); // Dùng tên "product"
+                 
+                // Load lại ảnh hiện tại
+                List<ProductImage> images = ProductImageDAO.selectByProductId(productId);
+                request.setAttribute("currentImages", images);
+            } else {
+                // Nếu không có product (vd: id lỗi), gửi ds rỗng
+                request.setAttribute("currentImages", new ArrayList<ProductImage>());
+            }
+		} catch (Exception e) {
+			e.printStackTrace();
+            request.setAttribute("error", error + " (Và lỗi khi tải lại dữ liệu form: " + e.getMessage() + ")");
+		}
+		request.setAttribute("view", "update_product.jsp"); // Chỉ định view con
+		RequestDispatcher rd = getServletContext().getRequestDispatcher("/seller/base.jsp");
+		rd.forward(request, response);
+	}
 }
