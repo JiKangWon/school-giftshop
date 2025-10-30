@@ -62,7 +62,7 @@
                                     <div class="carousel-inner rounded border">
                                         <c:forEach var="img" items="${images}" varStatus="loop">
                                             <div class="carousel-item ${loop.first ? 'active' : ''}">
-                                                <img src="${img}" class="d-block w-100" alt="${product.name} - ảnh ${loop.count}">
+                                                <img src="${pageContext.request.contextPath}${img}" class="d-block w-100" alt="${product.name} - ảnh ${loop.count}">
                                             </div>
                                         </c:forEach>
                                     </div>
@@ -79,14 +79,14 @@
                              <%-- Nếu có đúng 1 ảnh --%>
                             <c:when test="${not empty images && images.size() == 1}">
                                  <div class="single-product-image text-center rounded border p-2">
-                                    <img src="${images[0]}" class="img-fluid" alt="${product.name}">
+                                    <img src="${pageContext.request.contextPath}${images[0]}" class="img-fluid" alt="${product.name}">
                                 </div>
                             </c:when>
                             <%-- Nếu không có ảnh nào, dùng ảnh mặc định --%>
                             <c:otherwise>
                                 <div class="single-product-image text-center rounded border p-2">
                                      <%-- TODO: Thay đổi đường dẫn ảnh mặc định nếu cần --%>
-                                    <img src="${pageContext.request.contextPath}/images/default.jpg" class="img-fluid" alt="Ảnh mặc định">
+                                    <img src="${pageContext.request.contextPath}/uploads/products/product.png" class="img-fluid" alt="Ảnh mặc định">
                                 </div>
                             </c:otherwise>
                         </c:choose>
