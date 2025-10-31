@@ -10,39 +10,39 @@ import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 import model.Category;
 import model.Order;
-import model.OrderProduct;
+import model.OrderProduct; // Đã import
 import model.Product;
 import model.ProductImage;
 import model.User;
 
-import java.io.File; // Thêm import này
+import java.io.File;
 import java.io.IOException;
-import java.io.InputStream; // Thêm import này
-import java.math.BigDecimal;
-import java.nio.file.Files; // Thêm import này
-import java.nio.file.Path; // Thêm import này
-import java.nio.file.Paths; // Thêm import này
-import java.nio.file.StandardCopyOption; // Thêm import này
-import java.sql.SQLException; // Thêm nếu ProductDAO.insert ném ra
+import java.io.InputStream;
+import java.math.BigDecimal; // Import để tính toán report
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.ArrayList; // Thêm import này
-import java.util.Collection; // Thêm import này
-import java.util.HashMap; // Thêm import này
-import java.util.List; // Thêm import này
-import java.util.Map; // Thêm import này
-import java.util.UUID; // Để tạo tên file duy nhất
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID; 
 
-import database.ProductImageDAO; // Thêm DAO cho ảnh
-import jakarta.servlet.annotation.MultipartConfig; //
+import database.ProductImageDAO; 
+import jakarta.servlet.annotation.MultipartConfig; 
 import jakarta.servlet.http.Part;
 
 import database.CategoryDAO;
 import database.OrderDAO;
-import database.OrderProductDAO;
+import database.OrderProductDAO; // Đã import
 import database.ProductDAO;
 
 /**
@@ -257,6 +257,10 @@ public class Seller extends HttpServlet {
                 viewName = "orders.jsp"; // Tên view JSP
                 break;
             }
+            
+            // ============================================================
+            // START: CẬP NHẬT LOGIC BÁO CÁO (REPORT)
+            // ============================================================
             case "/report": {
                 try {
                     // 1. Xác định khoảng thời gian (Mặc định là tháng hiện tại)
@@ -286,7 +290,7 @@ public class Seller extends HttpServlet {
                     List<Order> completedOrders = OrderDAO.getCompletedOrdersByDateRange(startDate, endDate);
 
                     // 3. Tính toán thống kê
-                    BigDecimal totalRevenue = BigDecimal.ZERO;
+                    BigDecimal totalRevenue = BigDecimal.ZERO; // TỔNG DOANH THU THỰC TẾ
                     int totalOrdersCount = 0;
                     
                     // Tạo List<Map> để fix lỗi hiển thị LocalDateTime (giống trang Orders)
@@ -294,10 +298,34 @@ public class Seller extends HttpServlet {
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
                     for (Order order : completedOrders) {
-                        totalRevenue = totalRevenue.add(order.getTotalAmount()); // Cộng dồn doanh thu
-                        totalOrdersCount++; // Đếm số đơn
+                        
+                        // [LOGIC MỚI]
+                        // Tính doanh thu thực tế của đơn hàng, trừ đi các SP đã trả
+                        BigDecimal actualOrderRevenue = BigDecimal.ZERO;
+                        
+                        // Lấy tất cả chi tiết sản phẩm của đơn hàng này
+                        List<OrderProduct> orderProducts = OrderProductDAO.selectByOrderId(order.getId()); 
+                        
+                        for (OrderProduct op : orderProducts) {
+                            // Chỉ tính tiền cho các SP *không* có status là 'confirmed'
+                            if (!"confirmed".equals(op.getReturnStatus())) {
+                                // Đảm bảo an toàn
+                                if(op.getProduct() != null && op.getProduct().getPrice() != null && op.getQuantity() != null) {
+                                    BigDecimal itemPrice = op.getProduct().getPrice();
+                                    BigDecimal quantity = new BigDecimal(op.getQuantity());
+                                    actualOrderRevenue = actualOrderRevenue.add(itemPrice.multiply(quantity));
+                                }
+                            }
+                        }
+                        // Cộng doanh thu thực tế (đã trừ hàng trả) vào tổng
+                        totalRevenue = totalRevenue.add(actualOrderRevenue); 
+                        // [HẾT LOGIC MỚI]
+
+                        totalOrdersCount++; // Vẫn đếm đơn hàng
                         
                         // Thêm vào list đã format để gửi sang JSP
+                        // (Lưu ý: order.getTotalAmount() ở đây là TỔNG GỐC, 
+                        // nhưng tổng doanh thu (totalRevenue) ở trên đã được tính đúng)
                         Map<String, Object> map = new HashMap<>();
                         map.put("order", order);
                         map.put("createdAtFormatted", order.getCreatedAt().format(formatter));
@@ -307,7 +335,7 @@ public class Seller extends HttpServlet {
                     // 4. Gửi dữ liệu thống kê sang JSP
                     request.setAttribute("startDate", startOfMonth.toString()); // Gửi lại yyyy-MM-dd
                     request.setAttribute("endDate", endOfMonth.toString());   // Gửi lại yyyy-MM-dd
-                    request.setAttribute("totalRevenue", totalRevenue);
+                    request.setAttribute("totalRevenue", totalRevenue); // Gửi doanh thu đã tính lại
                     request.setAttribute("totalOrdersCount", totalOrdersCount);
                     request.setAttribute("reportOrders", formattedOrders); // Gửi list đã format
                     
@@ -318,6 +346,28 @@ public class Seller extends HttpServlet {
                 viewName = "report.jsp"; // Tên file JSP
                 break;
             }
+            // ============================================================
+            // END: CẬP NHẬT LOGIC BÁO CÁO (REPORT)
+            // ============================================================
+            
+            // ============================================================
+            // START: THÊM TRANG DUYỆT TRẢ HÀNG (GET)
+            // ============================================================
+            case "/confirm-return-product": {
+                try {
+                    // Dùng DAO mới để lấy danh sách SP đang chờ duyệt ('processing')
+                    List<OrderProduct> pendingList = OrderProductDAO.getPendingReturns();
+                    request.setAttribute("pendingReturns", pendingList);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    request.setAttribute("error", "Không thể tải danh sách chờ duyệt trả hàng.");
+                }
+                viewName = "confirm_return_product.jsp"; // Tên file JSP
+                break;
+            }
+            // ============================================================
+            // END: THÊM TRANG DUYỆT TRẢ HÀNG (GET)
+            // ============================================================
             case "/toggle-status": { // Thêm case mới
                 try {
                     // 1. Lấy ID sản phẩm từ URL
@@ -745,7 +795,61 @@ public class Seller extends HttpServlet {
 	            // Fail -> forward
 	            reloadUpdateForm(request, response, productId, "Lỗi khi cập nhật: " + e.getMessage(), oldInput);
 	        }       
-        } else {
+        } 
+        
+        // ============================================================
+        // START: THÊM LOGIC XỬ LÝ TRẢ HÀNG (POST)
+        // ============================================================
+        else if ("/handle-return".equals(action)) {
+            // 1. Kiểm tra session
+            HttpSession session = request.getSession();
+            User seller = (User) session.getAttribute("user");
+            if (seller == null || seller.getIsSeller() == 0) {
+                 response.sendRedirect(request.getContextPath() + "/login");
+                 return;
+            }
+            
+            // URL để redirect về
+            String redirectUrl = request.getContextPath() + "/seller-page/confirm-return-product";
+            
+            try {
+                // 2. Lấy parameters từ form
+                long opId = Long.parseLong(request.getParameter("opId"));
+                String decision = request.getParameter("decision");
+
+                boolean result = false;
+
+                // 3. Xử lý dựa trên quyết định
+                if ("confirm".equals(decision)) {
+                    // Gọi DAO để xác nhận trả hàng
+                    result = OrderProductDAO.confirmReturn(opId);
+                } else if ("reject".equals(decision)) {
+                    // Gọi DAO để từ chối trả hàng
+                    result = OrderProductDAO.rejectReturn(opId);
+                }
+
+                // 4. Redirect về trang duyệt
+                if(result) {
+                    response.sendRedirect(redirectUrl + "?success=true");
+                } else {
+                    // Lỗi có thể do opId không tồn tại hoặc status không còn là 'processing'
+                    response.sendRedirect(redirectUrl + "?error=ActionFailed");
+                }
+                
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+                response.sendRedirect(redirectUrl + "?error=InvalidId");
+            } catch (Exception e) {
+                e.printStackTrace();
+                response.sendRedirect(redirectUrl + "?error=InternalError");
+            }
+            return; // Dừng thực thi
+        }
+        // ============================================================
+        // END: THÊM LOGIC XỬ LÝ TRẢ HÀNG (POST)
+        // ============================================================
+        
+        else {
 			 doGet(request, response);
 		}
 	}

@@ -304,4 +304,59 @@ public class UserDAO {
 		}
 		return res > 0;
 	}
+	public static User selectSeller() {
+	    User seller = null;
+	    String sql = "SELECT u.*, a.* FROM Users u LEFT JOIN Addresses a ON u.address_id = a.id WHERE u.isSeller = 1";
+	    try (Connection conn = JDBCUtil.getConnection();
+	         PreparedStatement st = conn.prepareStatement(sql);
+	         ResultSet rs = st.executeQuery()) {
+
+	        if (rs.next()) {
+	            // (Giả sử bạn có hàm mapResultSetToUser đã join Address)
+	            // Nếu chưa có, bạn cần map thủ công ở đây:
+	            seller = new User();
+	            seller.setId(rs.getLong("id"));
+	            seller.setName(rs.getString("name"));
+	            // ... (set các trường khác của User) ...
+	            seller.setIsWarehouse(rs.getInt("isWarehouse"));
+
+	            Address addr = new Address();
+	            addr.setId(rs.getLong("address_id"));
+	            addr.setStreet(rs.getString("street"));
+	            // ... (set các trường khác của Address) ...
+	            seller.setAddress(addr);
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return seller;
+	}
+
+	// Thêm phương thức này vào UserDAO.java
+	public static Address findAddressByOrderProductId(long orderProductId) {
+	    Address address = null;
+	    String sql = "SELECT a.* FROM Addresses a " +
+	                 "JOIN Users u ON a.id = u.address_id " +
+	                 "JOIN Orders o ON u.id = o.user_id " +
+	                 "JOIN Order_Products op ON o.id = op.order_id " +
+	                 "WHERE op.id = ?";
+
+	    try (Connection conn = JDBCUtil.getConnection();
+	         PreparedStatement st = conn.prepareStatement(sql)) {
+
+	        st.setLong(1, orderProductId);
+	        try (ResultSet rs = st.executeQuery()) {
+	            if (rs.next()) {
+	                // (Giả sử bạn có hàm mapResultSetToAddress)
+	                address = new Address();
+	                address.setId(rs.getLong("id"));
+	                address.setStreet(rs.getString("street"));
+	                // ... (set các trường khác của Address) ...
+	            }
+	        }
+	    } catch (Exception e) {
+	        e.printStackTrace();
+	    }
+	    return address;
+	}
 }

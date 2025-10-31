@@ -39,4 +39,14 @@
     <servlet-name>Seller</servlet-name>
     <url-pattern>/seller-page/*</url-pattern>
   </servlet-mapping>
+  <servlet>
+    <description></description>
+    <display-name>Transport</display-name>
+    <servlet-name>Transport</servlet-name>
+    <servlet-class>controller.Transport</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>Transport</servlet-name>
+    <url-pattern>/transport-page/*</url-pattern>
+  </servlet-mapping>
 </web-app>

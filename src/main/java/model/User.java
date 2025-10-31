@@ -14,8 +14,17 @@ public class User {
     private String phone;
     private LocalDateTime createdAt;
     private int isSeller;             // theo mẫu (0/1)
+    private int isWarehouse;
 
-    public User() {}
+    public int getIsWarehouse() {
+		return isWarehouse;
+	}
+
+	public void setIsWarehouse(int isWarehouse) {
+		this.isWarehouse = isWarehouse;
+	}
+
+	public User() {}
 
     public User(Long id, String userName, String password, BigDecimal balance, String name, Address address, String addressNumber, String phone, LocalDateTime createdAt, int isSeller) {
         this.id = id;

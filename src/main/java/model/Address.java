@@ -48,4 +48,18 @@ public class Address {
                 ", street='" + street + '\'' +
                 '}';
     }
+    public String getName() {
+        StringBuilder sb = new StringBuilder();
+        if (street != null && !street.isEmpty()) sb.append(street);
+        if (ward != null && !ward.isEmpty()) sb.append(", ").append(ward);
+        if (district != null && !district.isEmpty()) sb.append(", ").append(district);
+        if (province != null && !province.isEmpty()) sb.append(", ").append(province);
+        if (country != null && !country.isEmpty()) sb.append(", ").append(country);
+        
+        // Xóa dấu phẩy nếu nó nằm ở đầu (trường hợp chỉ có Tỉnh/TP)
+        if (sb.length() > 2 && sb.substring(0, 2).equals(", ")) {
+            return sb.substring(2);
+        }
+        return sb.toString();
+    }
 }

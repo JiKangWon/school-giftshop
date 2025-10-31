@@ -70,6 +70,9 @@ public class Login extends HttpServlet {
                 // QUAN TRỌNG: Chuyển hướng đến SellerServlet, không phải file JSP
                 url = "/seller-page/home"; 
             }
+            if (user.getIsWarehouse()==1) {
+            	url = "/transport-page/update-address";
+            }
 
             // 3.3. Dùng sendRedirect (Post-Redirect-Get)
             response.sendRedirect(request.getContextPath() + url);

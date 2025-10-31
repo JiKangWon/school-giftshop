@@ -50,7 +50,7 @@
                             </c:if>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                            <li><a class="dropdown-item" href="#">Thông tin tài khoản</a></li>
+                            <li><a class="dropdown-item" href="${pageContext.request.contextPath}/CustomerProfile">Thông tin tài khoản</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="${pageContext.request.contextPath}/seller-page/logout">Đăng xuất</a></li>
                         </ul>
@@ -89,6 +89,11 @@
                         <li class="nav-item">
                             <a class="nav-link" href="${pageContext.request.contextPath}/seller-page/report">
                                 <i class="bi bi-bar-chart-line-fill"></i> Báo cáo doanh thu
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="${pageContext.request.contextPath}/seller-page/confirm-return-product">
+                                <i class="bi bi-arrow-return-left"></i> Yêu cầu trả hàng
                             </a>
                         </li>
                     </ul>

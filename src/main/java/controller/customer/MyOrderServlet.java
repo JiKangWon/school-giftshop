@@ -31,37 +31,43 @@ public class MyOrderServlet extends HttpServlet {
 		User user = (User) session.getAttribute("user");
 
 		if (user == null) {
-			response.sendRedirect(request.getContextPath() + "/customer/login.jsp"); // Thêm contextPath
+			response.sendRedirect(request.getContextPath() + "/customer/login.jsp");
 			return;
 		}
 
-		// DS don hang dang giao (Gọi hàm mới)
-		List<Order> processingOrders = OrderDAO.selectByUserIdAndStatus(user.getId(), "processing");
+		long userId = user.getId();
+
+		// 1. DS don hang dang giao (processing)
+		List<Order> processingOrders = OrderDAO.selectByUserIdAndStatus(userId, "processing");
 		for (Order order : processingOrders) {
-			// Giữ nguyên logic N+1 của bạn
 			order.setOrderProducts(OrderProductDAO.selectByOrderId(order.getId()));
 		}
 
-		// DS sp cho danh gia (Gọi hàm mới)
-		List<OrderProduct> reviewProducts = OrderProductDAO.getReviewableProducts(user.getId());
+		// 2. DS sp cho danh gia (Đã cập nhật SQL trong DAO)
+		List<OrderProduct> reviewProducts = OrderProductDAO.getReviewableProducts(userId);
 
-		// DS don hang da hoan thanh (Gọi hàm mới)
-		List<Order> completedOrders = OrderDAO.selectByUserIdAndStatus(user.getId(), "completed");
+		// 3. DS don hang da hoan thanh (completed)
+		List<Order> completedOrders = OrderDAO.selectByUserIdAndStatus(userId, "completed");
 		for (Order order : completedOrders) {
-			// Giữ nguyên logic N+1 của bạn
 			order.setOrderProducts(OrderProductDAO.selectByOrderId(order.getId()));
 		}
 		
+		// 4. (MỚI) DS sp đang chờ duyệt trả hàng
+		List<OrderProduct> processingReturnProducts = OrderProductDAO.getProcessingReturnProducts(userId);
 		
-        // ===== BẮT ĐẦU PHẦN SỬA LỖI (FIX LỖI LocalDateTime) =====
+		// 5. (MỚI) DS sp đã trả hàng thành công
+		List<OrderProduct> confirmedReturnProducts = OrderProductDAO.getConfirmedReturnProducts(userId);
+		
+		
+        // ===== BẮT ĐẦU PHẦN FORMAT NGÀY (GIỮ NGUYÊN) =====
         
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-        // 1. Chuyển đổi 'processingOrders' (List<Order>) thành List<Map>
+        // 1. Format 'processingOrders' (List<Order>)
         List<Map<String, Object>> formattedProcessing = new ArrayList<>();
         for (Order order : processingOrders) {
             Map<String, Object> map = new HashMap<>();
-            map.put("order", order); // Gửi đối tượng order gốc
+            map.put("order", order); 
             if (order.getCreatedAt() != null) {
                 map.put("createdAtFormatted", order.getCreatedAt().format(formatter));
             } else {
@@ -70,8 +76,7 @@ public class MyOrderServlet extends HttpServlet {
             formattedProcessing.add(map);
         }
         
-        // 2. Chuyển đổi 'reviewProducts' (List<OrderProduct>) thành List<Map>
-        // (Fix luôn cho tab review nếu sau này bạn cần dùng ngày)
+        // 2. Format 'reviewProducts' (List<OrderProduct>)
         List<Map<String, Object>> formattedReview = new ArrayList<>();
          for (OrderProduct op : reviewProducts) {
             Map<String, Object> map = new HashMap<>();
@@ -79,18 +84,22 @@ public class MyOrderServlet extends HttpServlet {
             if (op.getReceivedAt() != null) {
                 map.put("receivedAtFormatted", op.getReceivedAt().format(formatter));
             } else {
-                map.put("receivedAtFormatted", "N/A");
+            	// Nếu SP đã giao (completed) nhưng chưa có receivedAt (lỗi logic cũ), dùng tạm ngày order
+            	if (op.getOrder() != null && op.getOrder().getCreatedAt() != null) {
+            		map.put("receivedAtFormatted", op.getOrder().getCreatedAt().format(formatter));
+            	} else {
+            		map.put("receivedAtFormatted", "N/A");
+            	}
             }
             formattedReview.add(map);
         }
 
-        // 3. Chuyển đổi 'completedOrders' (List<Order>) thành List<Map>
+        // 3. Format 'completedOrders' (List<Order>)
         List<Map<String, Object>> formattedCompleted = new ArrayList<>();
         for (Order order : completedOrders) {
             Map<String, Object> map = new HashMap<>();
             map.put("order", order);
             if (order.getCreatedAt() != null) {
-                 // Bạn nên có cột 'completedAt' trong CSDL, tạm dùng 'createdAt'
                 map.put("completedAtFormatted", order.getCreatedAt().format(formatter));
             } else {
                  map.put("completedAtFormatted", "N/A");
@@ -98,40 +107,81 @@ public class MyOrderServlet extends HttpServlet {
             formattedCompleted.add(map);
         }
         
-        // ===== KẾT THÚC PHẦN SỬA LỖI =====
+        // 4. (MỚI) Format 'processingReturnProducts'
+        List<Map<String, Object>> formattedProcessingReturn = new ArrayList<>();
+        for (OrderProduct op : processingReturnProducts) {
+             Map<String, Object> map = new HashMap<>();
+             map.put("item", op);
+             formattedProcessingReturn.add(map);
+        }
 
-        // 4. Gửi danh sách ĐÃ ĐỊNH DẠNG (formatted) sang JSP
-		request.setAttribute("processingOrders", formattedProcessing); // Sửa
-		request.setAttribute("reviewProducts", formattedReview); // Sửa
-		request.setAttribute("completedOrders", formattedCompleted); // Sửa
+        // 5. (MỚI) Format 'confirmedReturnProducts'
+        List<Map<String, Object>> formattedConfirmedReturn = new ArrayList<>();
+        for (OrderProduct op : confirmedReturnProducts) {
+             Map<String, Object> map = new HashMap<>();
+             map.put("item", op);
+             formattedConfirmedReturn.add(map);
+        }
+
+        // ===== KẾT THÚC PHẦN FORMAT NGÀY =====
+
+		request.setAttribute("processingOrders", formattedProcessing); 
+		request.setAttribute("reviewProducts", formattedReview); 
+		request.setAttribute("completedOrders", formattedCompleted); 
+		
+		// Gửi 2 list mới
+		request.setAttribute("processingReturnProducts", formattedProcessingReturn);
+		request.setAttribute("confirmedReturnProducts", formattedConfirmedReturn);
 
 		request.getRequestDispatcher("/customer/MyOrder.jsp").forward(request, response);
 	}
 
-	// Xử lý POST (đánh dấu hoàn thành hoặc gửi đánh giá)
+	// Xử lý POST (thêm action "request_return")
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
+		
+		request.setCharacterEncoding("UTF-8"); // Đảm bảo đọc UTF-8 cho lý do trả hàng
 		String action = request.getParameter("action");
 		String errorMessage = null;
+		String successMessage = null;
 
         try {
             if ("received".equals(action)) {
-                // SỬA LỖI: Lấy "orderId" (từ JSP) thay vì "id"
                 String orderIdStr = request.getParameter("orderId"); 
-                long orderId = Long.parseLong(orderIdStr); // Dòng 115 (tương đương)
-                OrderProductDAO.markOrderCompleted(orderId); // Gọi hàm mới
+                long orderId = Long.parseLong(orderIdStr); 
+                OrderProductDAO.markOrderCompleted(orderId);
+                successMessage = "Đã xác nhận nhận hàng!";
                 
             } else if ("review".equals(action)) {
-                // SỬA LỖI: Lấy "orderProductId" (từ JSP) thay vì "id"
                 String opIdStr = request.getParameter("orderProductId");
-                long orderProductId = Long.parseLong(opIdStr); // Dòng 115 (tương đương)
+                long orderProductId = Long.parseLong(opIdStr);
                 String review = request.getParameter("review");
                 
                 if(review != null && !review.trim().isEmpty()) {
-                    OrderProductDAO.submitReview(orderProductId, review.trim()); // Gọi hàm mới
+                    OrderProductDAO.submitReview(orderProductId, review.trim());
+                    successMessage = "Gửi đánh giá thành công!";
                 } else {
                     errorMessage = "Nội dung đánh giá không được để trống.";
                 }
+            
+            // --- START: LOGIC MỚI ---
+            } else if ("request_return".equals(action)) {
+                String opIdStr = request.getParameter("orderProductId");
+                long orderProductId = Long.parseLong(opIdStr);
+                String returnReason = request.getParameter("returnReason");
+                
+                if (returnReason == null || returnReason.trim().isEmpty()) {
+                    errorMessage = "Vui lòng nhập lý do trả hàng.";
+                } else {
+                    boolean result = OrderProductDAO.requestReturn(orderProductId, returnReason.trim());
+                    if (result) {
+                        successMessage = "Yêu cầu trả hàng đã được gửi. Vui lòng chờ Shop xử lý.";
+                    } else {
+                        errorMessage = "Gửi yêu cầu thất bại. Sản phẩm có thể đang được xử lý.";
+                    }
+                }
+            // --- END: LOGIC MỚI ---
+                
             }
         } catch (NumberFormatException e) {
              e.printStackTrace();
@@ -141,8 +191,12 @@ public class MyOrderServlet extends HttpServlet {
              errorMessage = "Lỗi khi xử lý: " + e.getMessage();
         }
 
+        HttpSession session = request.getSession();
         if(errorMessage != null) {
-             request.getSession().setAttribute("MyOrderError", errorMessage); // Lưu lỗi vào session
+             session.setAttribute("MyOrderError", errorMessage);
+        }
+        if(successMessage != null) {
+             session.setAttribute("MyOrderSuccess", successMessage);
         }
 
 		response.sendRedirect(request.getContextPath() + "/MyOrder");
