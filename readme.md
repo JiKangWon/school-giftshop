@@ -119,13 +119,7 @@ school-giftshop/
 
 ---
 
-## 🧠 Ghi chú thêm
-
-* Có thể mở rộng module **Báo cáo** và **Giao vận** để kết hợp biểu đồ thống kê và bản đồ tương tác.
-* Hệ thống đã sẵn sàng để tích hợp thanh toán online và xác thực email tự động.
-
----
-
-**📧 Tác giả:** *Nhóm dự án School Giftshop*
-**📆 Phiên bản:** 1.0.0
-**🛠️ Bản quyền:** MIT License
+**📧 Tác giả:** *Nhóm sinh viên đồ án cuối kỳ*
+23110188 - Nguyễn Chí Cường
+23110318 - Nguyễn Thị Phương Thanh
+23110308 - Nguyễn Thành Tài
