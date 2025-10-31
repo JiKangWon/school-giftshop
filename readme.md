@@ -120,6 +120,6 @@ school-giftshop/
 ---
 
 **📧 Tác giả:** *Nhóm sinh viên đồ án cuối kỳ*
-23110188 - Nguyễn Chí Cường
-23110318 - Nguyễn Thị Phương Thanh
-23110308 - Nguyễn Thành Tài
+* 23110188 - Nguyễn Chí Cường
+* 23110318 - Nguyễn Thị Phương Thanh
+* 23110308 - Nguyễn Thành Tài
