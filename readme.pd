@@ -50,10 +50,6 @@ Chạy script SQL trong tệp createDB.sql để tạo tất cả các bảng v�
 Mở tệp src/main/java/database/JDBCUtil.java.
 Tìm đến phương thức getConnection().
 Cập nhật biến url với thông tin kết nối đến cơ sở dữ liệu MS SQL Server của bạn (tên server, port, tên database, user, password).
-// Ví dụ trong JDBCUtil.java
-String url = "jdbc:sqlserver://[SERVER_CUA_BAN]:1433;databaseName=school_giftshop;encrypt=true;trustServerCertificate=true;";
-String user = "sa";
-String password = "123456789";
 
 
 4. Build và Deploy
