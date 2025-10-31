@@ -12,8 +12,7 @@ document.addEventListener('DOMContentLoaded', function() {
         function getJsonData(id) {
             const element = document.getElementById(id);
             if (!element) {
-                // Sẽ bị bắt bởi try...catch bên ngoài
-                throw new Error('Không tìm thấy element dữ liệu: #' + id); 
+                throw new Error('Không tìm thấy element dữ liệu: #' + id);
             }
             const rawData = element.textContent || element.innerText;
             
@@ -34,7 +33,6 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Lấy ID vị trí hiện tại (được truyền qua data-attribute)
         const mapContainer = document.getElementById('transport-map');
-        // Tránh lỗi NaN nếu data-attribute bị thiếu
         const currentAddressId = parseInt(mapContainer.dataset.currentAddressId, 10) || -1; 
 
         const startAddressId = pathNodesData.length > 0 ? pathNodesData[0].id : -1;
@@ -44,7 +42,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const pathNodeIds = new Set(pathNodesData.map(node => node.id));
         const pathEdgeMap = new Map();
         
-        // Dùng vòng lặp for...of an toàn hơn
         for (let i = 0; i < pathNodesData.length - 1; i++) {
             let id1 = pathNodesData[i].id;
             let id2 = pathNodesData[i+1].id;
@@ -171,6 +168,68 @@ document.addEventListener('DOMContentLoaded', function() {
         };
 
         var network = new vis.Network(container, data, options);
+
+        // ======================================================
+        // (BẮT ĐẦU) BƯỚC D: Thêm sự kiện CLICK cho Node
+        // ======================================================
+
+        // Lấy khung thông tin từ JSP
+        const nodeInfoBox = document.getElementById('node-info-box');
+
+        // Hàm helper để tái tạo logic getFullAddress() của Java
+        function getFullAddress(address) {
+            if (!address) return "Không có thông tin.";
+            let parts = [
+                address.street,
+                address.ward,
+                address.district,
+                address.province,
+                address.country
+            ];
+            // Lọc ra các phần null hoặc rỗng
+            return parts.filter(p => p && p.trim() !== "").join(", ");
+        }
+
+        // Lắng nghe sự kiện click trên bản đồ
+        network.on('click', function(params) {
+            
+            // Kiểm tra xem người dùng có click vào node nào không
+            if (params.nodes.length > 0) {
+                const clickedNodeId = params.nodes[0];
+                
+                // Tìm thông tin đầy đủ của node đó từ mảng data
+                // (Sử dụng .find() trên mảng allNodesData đã được parse)
+                const clickedNodeData = allNodesData.find(node => node.id === clickedNodeId);
+                
+                if (clickedNodeData) {
+                    // Tạo nội dung HTML để hiển thị
+                    let htmlContent = `
+                        <h5 class"text-primary mb-1">${clickedNodeData.name}</h5>
+                        <p class="mb-0">
+                            <i class="bi bi-geo-alt-fill"></i> 
+                            ${getFullAddress(clickedNodeData)}
+                        </p>
+                        <small class="text-muted">Node ID: ${clickedNodeData.id}</small>
+                    `;
+                    // Cập nhật khung thông tin
+                    nodeInfoBox.innerHTML = htmlContent;
+                }
+                
+            } else {
+                // Nếu người dùng click ra ngoài (vào nền)
+                nodeInfoBox.innerHTML = `
+                    <p class="text-muted text-center">
+                        <i class="bi bi-info-circle"></i> 
+                        Nhấp vào một địa điểm trên bản đồ để xem chi tiết.
+                    </p>
+                `;
+            }
+        });
+        
+        // ======================================================
+        // (KẾT THÚC) BƯỚC D
+        // ======================================================
+
     
     } catch (error) {
         console.error("Lỗi khi vẽ bản đồ:", error);
@@ -181,4 +240,3 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-

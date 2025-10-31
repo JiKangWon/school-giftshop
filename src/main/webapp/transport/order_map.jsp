@@ -95,6 +95,13 @@
                                     <fmt:formatNumber value="${totalDistance}" maxFractionDigits="1" /> km
                                 </div>
                             </c:if>
+                            <div id="node-info-box">
+    <p class="text-muted text-center">
+        <i class="bi bi-info-circle"></i> 
+        Nhấp vào một địa điểm trên bản đồ để xem chi tiết.
+    </p>
+</div>
+                            
 
                             <a href="${pageContext.request.contextPath}/MyOrder" class="btn btn-secondary w-100 mt-2">
                                 <i class="bi bi-arrow-left"></i> Quay lại Đơn hàng

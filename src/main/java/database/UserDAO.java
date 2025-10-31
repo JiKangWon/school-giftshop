@@ -89,8 +89,10 @@ public class UserDAO {
 				String phone = rs.getString("phone");
 				LocalDateTime createdAt = rs.getObject("createdAt", java.time.LocalDateTime.class);
 				int isSeller = rs.getInt("isSeller");
+				int isWarehouse = rs.getInt("isWarehouse");
 				User newUser = new User(id, userName, password, balance, name, address, addressNumber, phone, createdAt,
 						isSeller);
+				newUser.setIsWarehouse(isWarehouse);
 				user = newUser;
 			}
 			st.close();
